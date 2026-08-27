@@ -9,10 +9,10 @@
         "name": "S0: [Free, Free, Free, Raw, Raw, Raw]",
         "x": 680,
         "y": 50,
-        "heuristic": 41,
+        "heuristic": 42,
         "state": "empty",
         "neighbors": {
-          "S1: [Free, Free, Free, Raw, Prepped, Prepped] (Batch Prep BOTH)": 4,
+          "S1: [Free, Free, Free, Raw, Prepped, Prepped] (Batch Prep BOTH)": 5,
           "S2: [Free, Free, Free, Raw, Prepped, Raw] (Prep Dhal Only)": 4,
           "X1: [Free, Busy, Free, Raw, Raw, Cooking] (Cook Raw Chicken)": 20,
           "X4: [Free, Free, Busy, Cooking, Raw, Raw] (Dry Rice Launch)": 1
@@ -179,7 +179,7 @@
         "heuristic": 0,
         "state": "empty",
         "neighbors": {
-          "G1: [Free, Free, Free, Done, Done, Done] (Dinner Served 41m)": 0
+          "G1: [Free, Free, Free, Done, Done, Done] (Dinner Served 42m)": 0
         }
       },
       {
