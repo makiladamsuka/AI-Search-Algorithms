@@ -1,0 +1,143 @@
+{
+  "metadata": {
+    "title": "Sri Lankan Smart Cooking Planner",
+    "is_undirected": false
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "0_Start",
+        "x": 100,
+        "y": 250,
+        "heuristic": 55,
+        "state": "empty",
+        "neighbors": {
+          "1_Wash_Rice": 3
+        }
+      },
+      {
+        "name": "1_Wash_Rice",
+        "x": 220,
+        "y": 250,
+        "heuristic": 52,
+        "state": "empty",
+        "neighbors": {
+          "2_Start_RiceCooker": 1
+        }
+      },
+      {
+        "name": "2_Start_RiceCooker",
+        "x": 340,
+        "y": 250,
+        "heuristic": 51,
+        "state": "empty",
+        "neighbors": {
+          "3A_Chop_Dhal_Onions": 4,
+          "3_Batch_Chop_Onions": 5
+        }
+      },
+      {
+        "name": "3A_Chop_Dhal_Onions",
+        "x": 480,
+        "y": 150,
+        "heuristic": 47,
+        "state": "empty",
+        "neighbors": {
+          "3B_Chop_Chk_Onions": 4
+        }
+      },
+      {
+        "name": "3B_Chop_Chk_Onions",
+        "x": 620,
+        "y": 150,
+        "heuristic": 43,
+        "state": "empty",
+        "neighbors": {
+          "4_Clean_Chicken": 5
+        }
+      },
+      {
+        "name": "3_Batch_Chop_Onions",
+        "x": 480,
+        "y": 350,
+        "heuristic": 46,
+        "state": "empty",
+        "neighbors": {
+          "4_Clean_Chicken": 5
+        }
+      },
+      {
+        "name": "4_Clean_Chicken",
+        "x": 750,
+        "y": 250,
+        "heuristic": 41,
+        "state": "empty",
+        "neighbors": {
+          "5_Marinate_Chicken": 3
+        }
+      },
+      {
+        "name": "5_Marinate_Chicken",
+        "x": 880,
+        "y": 250,
+        "heuristic": 38,
+        "state": "empty",
+        "neighbors": {
+          "6_Wash_Dhal": 2
+        }
+      },
+      {
+        "name": "6_Wash_Dhal",
+        "x": 1010,
+        "y": 250,
+        "heuristic": 36,
+        "state": "empty",
+        "neighbors": {
+          "7_Temper_Dhal": 3
+        }
+      },
+      {
+        "name": "7_Temper_Dhal",
+        "x": 1140,
+        "y": 250,
+        "heuristic": 33,
+        "state": "empty",
+        "neighbors": {
+          "8_Simmer_Dhal": 12
+        }
+      },
+      {
+        "name": "8_Simmer_Dhal",
+        "x": 1270,
+        "y": 250,
+        "heuristic": 21,
+        "state": "empty",
+        "neighbors": {
+          "9_Cook_Chicken": 20
+        }
+      },
+      {
+        "name": "9_Cook_Chicken",
+        "x": 1400,
+        "y": 250,
+        "heuristic": 1,
+        "state": "empty",
+        "neighbors": {
+          "10_Dinner_Served": 0
+        }
+      },
+      {
+        "name": "10_Dinner_Served",
+        "x": 1530,
+        "y": 250,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {}
+      }
+    ],
+    "source": "0_Start",
+    "goals": [
+      "10_Dinner_Served"
+    ]
+  }
+}

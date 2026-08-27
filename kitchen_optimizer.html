@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Workflow Optimizer - Multi-Algorithm Full State-Space Visualizer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        warmbg: '#faf7f2',
+                        cardbg: '#ffffff',
+                        amberaccent: '#d97706',
+                        amberdark: '#b45309',
+                        slateindigo: '#334155',
+                        emeraldaccent: '#059669',
+                        roseaccent: '#e11d48',
+                        ricecookerblue: '#2563eb',
+                        warmborder: '#e7e0d6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #faf7f2;
+            color: #1e293b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 380px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            border: 1px solid #e7e0d6;
+        }
+        .tab-active {
+            border-bottom: 3px solid #d97706;
+            color: #b45309;
+            font-weight: 700;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- Header Section -->
+    <header class="bg-white border-b border-warmborder sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center space-x-3">
+                    <span class="px-2.5 py-1 text-xs font-semibold uppercase tracking-wide bg-amber-100 text-amberdark rounded-md">Multi-Algorithm AI Search Visualizer</span>
+                    <span class="text-xs text-slate-500 font-mono">Dishes: Dhal + Chicken + Rice | Appliances: Gas Stove + Rice Cooker</span>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900 mt-1">Kitchen Workflow Optimizer</h1>
+                <p class="text-xs sm:text-sm text-slate-600">Full State-Space Graph with Combinations, Dead Ends & Multi-Algorithm Search Engine</p>
+            </div>
+            
+            <!-- Global Algorithm Selector & Metric Badges -->
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="bg-warmbg p-2 rounded-xl border border-warmborder flex flex-col justify-center">
+                    <label for="globalAlgoSelect" class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block px-1">Active AI Search Algorithm</label>
+                    <select id="globalAlgoSelect" onchange="changeGlobalAlgorithm(this.value)" class="bg-white border border-warmborder text-xs font-bold text-amberdark rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amberaccent cursor-pointer">
+                        <option value="astar">A* Search (f = g + h) - Optimal</option>
+                        <option value="gbfs">Greedy Best-First Search (f = h)</option>
+                        <option value="ucs">Uniform Cost Search / Dijkstra (f = g)</option>
+                        <option value="bfs">Breadth-First Search (BFS - Level Order)</option>
+                        <option value="dfs">Depth-First Search (DFS - Backtracking)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-warmbg p-2 rounded-lg border border-warmborder text-center min-w-[90px]">
+                        <span class="text-slate-500 text-[10px] block">Optimal Cost</span>
+                        <span id="hdrOptimalCost" class="text-sm font-bold text-emeraldaccent">58 <span class="text-[10px] font-normal text-slate-500">mins</span></span>
+                    </div>
+                    <div class="bg-warmbg p-2 rounded-lg border border-warmborder text-center min-w-[90px]">
+                        <span class="text-slate-500 text-[10px] block">Nodes Expanded</span>
+                        <span id="hdrNodesExpanded" class="text-sm font-bold text-amberdark">7 / 16</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto border-t border-warmborder space-x-6 text-sm font-medium custom-scrollbar">
+            <button onclick="switchTab('graph')" id="tab-graph" class="py-3 whitespace-nowrap tab-active transition-colors">🗺️ Full State-Space Graph</button>
+            <button onclick="switchTab('trace')" id="tab-trace" class="py-3 whitespace-nowrap text-slate-600 hover:text-amberdark transition-colors">⚡ Multi-Algorithm Execution Trace</button>
+            <button onclick="switchTab('kitchen')" id="tab-kitchen" class="py-3 whitespace-nowrap text-slate-600 hover:text-amberdark transition-colors">🍳 Kitchen & Dead-End Simulator</button>
+            <button onclick="switchTab('charts')" id="tab-charts" class="py-3 whitespace-nowrap text-slate-600 hover:text-amberdark transition-colors">📊 Algorithm Performance Analytics</button>
+            <button onclick="switchTab('calculator')" id="tab-calculator" class="py-3 whitespace-nowrap text-slate-600 hover:text-amberdark transition-colors">🧮 Cost & Heuristic Tool</button>
+            <button onclick="switchTab('viva')" id="tab-viva" class="py-3 whitespace-nowrap text-slate-600 hover:text-amberdark transition-colors">📚 Viva & Formulation Reference</button>
+        </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- ================= TAB 1: FULL STATE-SPACE GRAPH EXPLORER ================= -->
+        <section id="sec-graph" class="space-y-6">
+            <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-lg font-bold text-slate-900">Full Combinations & Dead Ends State-Space Graph</h2>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-300">16 State Nodes</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-0.5">Explore all state combinations including valid paths, suboptimal branches, and 5 distinct Dead Ends (rule violations & capacity bounds). Click any node to inspect.</p>
+                    </div>
+                    
+                    <!-- Graph Filter Controls -->
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                        <button onclick="setGraphFilter('all')" id="btnFilterAll" class="px-3 py-1.5 font-semibold bg-amber-100 text-amberdark rounded-lg border border-amber-300">Show All Nodes</button>
+                        <button onclick="setGraphFilter('algo')" id="btnFilterAlgo" class="px-3 py-1.5 font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg border border-slate-300">Active Algo Path</button>
+                        <button onclick="setGraphFilter('deadends')" id="btnFilterDead" class="px-3 py-1.5 font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg border border-rose-300">Highlight Dead Ends Only</button>
+                        <button onclick="setGraphFilter('smart')" id="btnFilterSmart" class="px-3 py-1.5 font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-lg border border-emerald-300">Optimal Path (Cost 58)</button>
+                    </div>
+                </div>
+
+                <!-- Canvas Graph Container -->
+                <div class="canvas-container overflow-hidden">
+                    <canvas id="graphCanvas"></canvas>
+                </div>
+
+                <!-- Legend & Node Inspector Bar -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+                    <!-- Graph Legend -->
+                    <div class="bg-warmbg p-4 rounded-lg border border-warmborder text-xs text-slate-700 space-y-2">
+                        <div class="font-bold text-slate-800 border-b border-warmborder pb-1">Graph Legend & Status Indicators</div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                                <span class="font-medium">Parallel Path (Optimal)</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                                <span class="font-medium">Sequential Path (Suboptimal)</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="w-3 h-3 rounded-full bg-slate-900 inline-block"></span>
+                                <span class="font-medium">❌ Dead End / Violation</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+                                <span class="font-medium">Start / Goal Node</span>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-mono pt-1">
+                            Node Badge = $h(n)$ heuristic estimate | Red edge = Invalid rule attempt
+                        </div>
+                    </div>
+
+                    <!-- Selected Node Inspector -->
+                    <div id="nodeInspector" class="lg:col-span-2 bg-amber-50/60 p-4 rounded-lg border border-amber-200 text-xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="font-bold text-amberdark text-sm">Node Inspector: <span id="inspNodeId" class="text-slate-900 font-bold">S_0 (Start Node)</span></div>
+                            <span id="inspNodeStatus" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">VALID STATE</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700 bg-white p-3 rounded-lg border border-amber-100 mb-2">
+                            <div>Human ($H$): <span id="inspH" class="font-semibold text-slate-900">Free</span></div>
+                            <div>Stove ($S_{stove}$): <span id="inspS" class="font-semibold text-slate-900">Free</span></div>
+                            <div>Rice Cooker ($S_{rc}$): <span id="inspSrc" class="font-semibold text-slate-900">Free</span></div>
+                            <div>Bowls ($B$): <span id="inspB" class="font-semibold text-slate-900">0</span></div>
+                            <div>Dhal ($P_d$): <span id="inspPd" class="font-semibold text-slate-900">Raw</span></div>
+                            <div>Chicken ($P_c$): <span id="inspPc" class="font-semibold text-slate-900">Raw</span></div>
+                            <div>Rice ($P_r$): <span id="inspPr" class="font-semibold text-slate-900">Raw</span></div>
+                            <div class="font-mono text-amberdark font-bold">
+                                $g(n)=<span id="inspG">0</span>$ | $h(n)=<span id="inspHn">40</span>$ | $f(n)=<span id="inspF">40</span>$
+                            </div>
+                        </div>
+                        <div class="text-slate-600 italic text-[11px]" id="inspDesc">
+                            Initial kitchen state: All ingredients raw, all equipment free.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: MULTI-ALGORITHM EXECUTION ENGINE ================= -->
+        <section id="sec-trace" class="space-y-6 hidden">
+            <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <div class="flex items-center space-x-3">
+                            <h2 class="text-lg font-bold text-slate-900">Multi-Algorithm Search Execution Engine</h2>
+                            <span id="traceAlgoBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amberdark">A* Search</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-0.5">Step-by-step trace showing OPEN Priority Queue / Fringe, CLOSED Visited List, node expansion, and dead end detection.</p>
+                    </div>
+
+                    <!-- Controller Buttons & Local Algo Switcher -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="tracePrevStep()" id="btnTracePrev" class="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300">⏮️ Prev</button>
+                        <button onclick="toggleTraceAutoPlay()" id="btnTracePlay" class="px-4 py-1.5 text-xs font-semibold bg-amberaccent hover:bg-amberdark text-white rounded-lg shadow-sm">▶️ Auto Play</button>
+                        <button onclick="traceNextStep()" id="btnTraceNext" class="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300">Next ⏭️</button>
+                        <button onclick="resetTrace()" class="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border border-slate-300">🔄 Reset</button>
+                    </div>
+                </div>
+
+                <!-- Current Step Banner -->
+                <div class="bg-slate-900 text-white p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-3 text-xs mb-6">
+                    <div>
+                        <span id="traceAlgoNameTitle" class="text-amber-400 font-bold uppercase tracking-wider text-[10px] block">A* SEARCH EXECUTION</span>
+                        <div id="traceStepTitle" class="text-sm font-semibold mt-0.5">Step 1: Initializing Search Graph</div>
+                        <div id="traceStepDesc" class="text-slate-300 mt-1">Start node S_0 placed into OPEN list with g=0, h=40, f=40.</div>
+                    </div>
+                    <div class="flex items-center space-x-4 border-t md:border-t-0 border-slate-700 pt-2 md:pt-0">
+                        <div class="text-center">
+                            <span class="text-slate-400 block text-[10px]">CURRENT STEP</span>
+                            <span id="traceStepNum" class="text-xl font-bold text-amber-400">1 / 7</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-slate-400 block text-[10px]">CURRENT EXPANDED $f(n)$</span>
+                            <span id="traceMinF" class="text-xl font-bold text-emerald-400">40</span>
+                        </div>
+                        <div class="text-center border-l border-slate-700 pl-4">
+                            <span class="text-slate-400 block text-[10px]">DEAD ENDS ENCOUNTERED</span>
+                            <span id="traceDeadCount" class="text-xl font-bold text-rose-400">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priority Queue & Visited Lists Display -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- OPEN List Card -->
+                    <div class="bg-amber-50/60 p-4 rounded-lg border border-amber-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-bold text-amberdark text-xs uppercase tracking-wide">OPEN List (Fringe / Priority Queue)</h3>
+                            <span id="traceQueueOrdering" class="text-[10px] text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-full font-mono">Sorted by f = g + h</span>
+                        </div>
+                        <div id="openListContainer" class="flex flex-wrap gap-2 min-h-[50px] items-center">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- CLOSED List Card -->
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wide">CLOSED List (Visited Nodes)</h3>
+                            <span class="text-[10px] text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full font-mono">Evaluated / Expanded</span>
+                        </div>
+                        <div id="closedListContainer" class="flex flex-wrap gap-2 min-h-[50px] items-center">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trace Log Table -->
+                <div class="overflow-x-auto rounded-lg border border-warmborder">
+                    <table class="min-w-full divide-y divide-warmborder text-xs">
+                        <thead class="bg-warmbg text-slate-700 font-bold">
+                            <tr>
+                                <th class="px-3 py-2.5 text-left">Step</th>
+                                <th class="px-3 py-2.5 text-left">Expanded Node</th>
+                                <th class="px-3 py-2.5 text-left">State Description</th>
+                                <th class="px-3 py-2.5 text-center">$g(n)$</th>
+                                <th class="px-3 py-2.5 text-center">$h(n)$</th>
+                                <th class="px-3 py-2.5 text-center">$f(n)$</th>
+                                <th class="px-3 py-2.5 text-left">Generated Children</th>
+                                <th class="px-3 py-2.5 text-left">Decision / Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="traceTableBody" class="divide-y divide-warmborder bg-white text-slate-700 font-mono">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: DUAL-APPLIANCE & DEAD-END SIMULATOR ================= -->
+        <section id="sec-kitchen" class="space-y-6 hidden">
+            <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Dual-Appliance Kitchen & Dead-End Simulator</h2>
+                        <p class="text-xs text-slate-600">Simulate workflow paths, equipment concurrent cooking, and inspect what causes kitchen Dead Ends.</p>
+                    </div>
+                    <!-- Path Selector & Controls -->
+                    <div class="flex items-center space-x-2">
+                        <select id="simPathSelect" onchange="changeSimPath()" class="text-xs bg-warmbg border border-warmborder rounded-lg px-3 py-1.5 font-semibold text-slate-700">
+                            <option value="smart">Optimal Parallel Path (Cost 58)</option>
+                            <option value="dumb">Sequential Path (Cost 83)</option>
+                            <option value="dead1">❌ Dead End 1: Cook Raw Un-Prepped Meat</option>
+                            <option value="dead2">❌ Dead End 2: Dirty Bowl Sink Overflow (>5)</option>
+                            <option value="dead3">❌ Dead End 3: Double Stove Burner Contention</option>
+                        </select>
+                        <button onclick="toggleSimPlay()" id="btnSimPlay" class="px-4 py-1.5 text-xs font-semibold bg-amberaccent hover:bg-amberdark text-white rounded-lg shadow-sm">▶️ Animate</button>
+                        <button onclick="resetSim()" class="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border border-slate-300">🔄 Reset</button>
+                    </div>
+                </div>
+
+                <!-- Simulation Progress Slider Bar -->
+                <div class="bg-warmbg p-3 rounded-lg border border-warmborder mb-6">
+                    <div class="flex justify-between items-center text-xs mb-1">
+                        <span class="font-bold text-slate-700">Timeline Step: <span id="simStepIdx">0</span> of <span id="simMaxStep">5</span></span>
+                        <span id="simCurrentNodeLabel" class="font-mono text-amberdark font-semibold">Node S_0 (Initial State)</span>
+                    </div>
+                    <input type="range" id="simScrubber" min="0" max="5" value="0" oninput="scrubSim(this.value)" class="w-full accent-amberaccent cursor-pointer">
+                </div>
+
+                <!-- Dual Appliance Kitchen Layout -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <!-- 1. Human Worker Station -->
+                    <div class="bg-amber-50/50 p-4 rounded-xl border border-amber-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-amberdark">👨🍳 Human Worker</span>
+                                <span id="simHumanBadge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800">FREE</span>
+                            </div>
+                            
+                            <div class="bg-white p-3 rounded-lg border border-amber-100 text-center my-2 shadow-sm">
+                                <div id="simHumanAvatar" class="text-3xl mb-1">🧘</div>
+                                <div id="simHumanAction" class="font-bold text-xs text-slate-800">Idle / Ready</div>
+                                <div id="simHumanDesc" class="text-[10px] text-slate-500 mt-0.5">Available for active prep.</div>
+                            </div>
+                        </div>
+
+                        <div class="text-[10px] bg-white p-2 rounded border border-amber-100 text-slate-600 font-mono mt-1">
+                            Active Prep: <span id="simActiveMins" class="font-bold text-slate-900">0</span> mins
+                        </div>
+                    </div>
+
+                    <!-- 2. Gas Stove Station -->
+                    <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-amberdark">🔥 Gas Stove (1 Burner)</span>
+                                <span id="simStoveBadge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 text-slate-700">FREE</span>
+                            </div>
+
+                            <div class="bg-white p-3 rounded-lg border border-orange-100 text-center my-2 shadow-sm">
+                                <div id="simStoveIcon" class="text-3xl mb-1">🧊</div>
+                                <div id="simStoveDish" class="font-bold text-xs text-slate-800">Empty Burner</div>
+                                <div id="simStoveTimer" class="text-[10px] text-slate-500 mt-0.5">Available for Dhal / Chicken.</div>
+                            </div>
+                        </div>
+
+                        <div class="text-[10px] bg-white p-2 rounded border border-orange-100 text-slate-600 font-mono mt-1">
+                            Stove Occupancy: <span id="simStoveMins" class="font-bold text-slate-900">0</span> mins
+                        </div>
+                    </div>
+
+                    <!-- 3. Rice Cooker Station -->
+                    <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-700">🍚 Electric Rice Cooker</span>
+                                <span id="simRcBadge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 text-slate-700">FREE</span>
+                            </div>
+
+                            <div class="bg-white p-3 rounded-lg border border-blue-100 text-center my-2 shadow-sm">
+                                <div id="simRcIcon" class="text-3xl mb-1">🍚</div>
+                                <div id="simRcDish" class="font-bold text-xs text-slate-800">Rice Cooker Off</div>
+                                <div id="simRcTimer" class="text-[10px] text-slate-500 mt-0.5">Dedicated unit (20m cycle).</div>
+                            </div>
+                        </div>
+
+                        <div class="text-[10px] bg-white p-2 rounded border border-blue-100 text-slate-600 font-mono mt-1">
+                            Rice Cooker Time: <span id="simRcMins" class="font-bold text-slate-900">0</span> mins
+                        </div>
+                    </div>
+
+                    <!-- 4. Sink & Bowls Station -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-700">🧽 Sink & Bowls</span>
+                                <span id="simBowlBadge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 text-slate-700">0 Bowls</span>
+                            </div>
+
+                            <div class="bg-white p-3 rounded-lg border border-slate-200 text-center my-2 shadow-sm min-h-[90px] flex flex-col justify-center items-center">
+                                <div id="simBowlVisual" class="flex gap-1 text-2xl my-0.5">
+                                    <span class="text-slate-300">🥣</span>
+                                </div>
+                                <div id="simBowlText" class="text-[10px] text-slate-600 font-medium">Sink clean. No penalty.</div>
+                            </div>
+                        </div>
+
+                        <div class="text-[10px] bg-white p-2 rounded border border-slate-200 text-slate-600 font-mono mt-1">
+                            Bowl Penalty: <span id="simBowlPenalty" class="font-bold text-roseaccent">+0</span> mins
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3 Recipe Progress Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <!-- Dhal Curry Status -->
+                    <div class="bg-warmbg p-4 rounded-lg border border-warmborder">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-xs text-slate-800 flex items-center gap-2">🍲 Dhal Curry (Stove)</span>
+                            <span id="simDhalStatus" class="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-200 text-slate-700">Raw</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                            <div id="simDhalBar" class="bg-amberaccent h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Chicken Curry Status -->
+                    <div class="bg-warmbg p-4 rounded-lg border border-warmborder">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-xs text-slate-800 flex items-center gap-2">🍗 Chicken Curry (Stove)</span>
+                            <span id="simChickenStatus" class="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-200 text-slate-700">Raw</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                            <div id="simChickenBar" class="bg-amberdark h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Rice Status -->
+                    <div class="bg-warmbg p-4 rounded-lg border border-warmborder">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-xs text-slate-800 flex items-center gap-2">🍚 Steamed Rice (Rice Cooker)</span>
+                            <span id="simRiceStatus" class="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-200 text-slate-700">Raw</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                            <div id="simRiceBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: ALGORITHM PERFORMANCE ANALYTICS ================= -->
+        <section id="sec-charts" class="space-y-6 hidden">
+            <!-- Multi-Algorithm Performance Summary Table -->
+            <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm">
+                <h2 class="text-base font-bold text-slate-900 mb-1">AI Search Algorithm Comparative Benchmarks</h2>
+                <p class="text-xs text-slate-600 mb-4">Comparing path quality, total cost $g(G)$, nodes expanded, and dead end vulnerability across all 5 algorithms.</p>
+                
+                <div class="overflow-x-auto rounded-lg border border-warmborder">
+                    <table class="min-w-full divide-y divide-warmborder text-xs">
+                        <thead class="bg-warmbg text-slate-700 font-bold">
+                            <tr>
+                                <th class="px-3 py-2.5 text-left">Algorithm</th>
+                                <th class="px-3 py-2.5 text-center">Found Path Cost</th>
+                                <th class="px-3 py-2.5 text-center">Nodes Expanded</th>
+                                <th class="px-3 py-2.5 text-center">Dead Ends Hit</th>
+                                <th class="px-3 py-2.5 text-center">Optimal?</th>
+                                <th class="px-3 py-2.5 text-left">Behavior & Trade-offs</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-warmborder bg-white text-slate-700 font-mono">
+                            <tr class="bg-amber-50/60 font-bold">
+                                <td class="px-3 py-2 text-amberdark">A* Search ($f = g + h$)</td>
+                                <td class="px-3 py-2 text-center text-emerald-600">58 mins</td>
+                                <td class="px-3 py-2 text-center">7</td>
+                                <td class="px-3 py-2 text-center text-emerald-600">0</td>
+                                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">YES</span></td>
+                                <td class="px-3 py-2 text-slate-600 font-sans">Balances past cost $g(n)$ and admissible heuristic $h(n)$. Avoids dead ends.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 text-slate-900 font-bold">Greedy Best-First ($f = h$)</td>
+                                <td class="px-3 py-2 text-center text-amberdark">58 mins</td>
+                                <td class="px-3 py-2 text-center">6</td>
+                                <td class="px-3 py-2 text-center text-emerald-600">0</td>
+                                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 bg-amber-100 text-amberdark rounded font-bold">DEPENDS</span></td>
+                                <td class="px-3 py-2 text-slate-600 font-sans">Fast expansion based only on $h(n)$. Can be misled if heuristic is non-admissible.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 text-slate-900 font-bold">Uniform Cost / Dijkstra ($f = g$)</td>
+                                <td class="px-3 py-2 text-center text-emerald-600">58 mins</td>
+                                <td class="px-3 py-2 text-center text-rose-600">11</td>
+                                <td class="px-3 py-2 text-center">1</td>
+                                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">YES</span></td>
+                                <td class="px-3 py-2 text-slate-600 font-sans">Guarantees optimality but expands more nodes as it ignores remaining heuristic.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 text-slate-900 font-bold">Breadth-First Search (BFS)</td>
+                                <td class="px-3 py-2 text-center text-rose-600">83 mins</td>
+                                <td class="px-3 py-2 text-center text-rose-600">12</td>
+                                <td class="px-3 py-2 text-center">2</td>
+                                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold">NO</span></td>
+                                <td class="px-3 py-2 text-slate-600 font-sans">Finds shortest step count, NOT lowest cost! Selects 5-step sequential path.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 text-slate-900 font-bold">Depth-First Search (DFS)</td>
+                                <td class="px-3 py-2 text-center text-rose-600">83 mins</td>
+                                <td class="px-3 py-2 text-center text-rose-600">14</td>
+                                <td class="px-3 py-2 text-center text-rose-600">4</td>
+                                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold">NO</span></td>
+                                <td class="px-3 py-2 text-slate-600 font-sans">Dives deep into un-prepped dead ends, backtracks multiple times. Suboptimal.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Cumulative Path Cost Chart -->
+                <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 mb-1">Cumulative Path Cost Progression ($g(n)$)</h2>
+                        <p class="text-xs text-slate-600 mb-4">Tracking cost progression across search algorithms.</p>
+                        <div class="chart-container">
+                            <canvas id="costProgressionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nodes Expanded vs Dead Ends Chart -->
+                <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 mb-1">Search Efficiency & Dead Ends Hit</h2>
+                        <p class="text-xs text-slate-600 mb-4">Comparing expanded node efficiency vs dead end vulnerabilities.</p>
+                        <div class="chart-container">
+                            <canvas id="breakdownChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: COST & HEURISTIC CALCULATOR ================= -->
+        <section id="sec-calculator" class="space-y-6 hidden">
+            <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">Dual-Appliance Step Cost & Heuristic Calculator</h2>
+                <p class="text-xs text-slate-600 mb-6">Experiment with state variables to calculate $g(n)$, $h(n)=\max(\text{Stove}, \text{RiceCooker}) + 2B$, and verify admissibility.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Sliders Panel -->
+                    <div class="space-y-5 bg-warmbg p-5 rounded-xl border border-warmborder">
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-amberdark">Step Cost Variables $g(n)$</h3>
+                        
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <label for="calcActiveTime">Active Prep Minutes Taken</label>
+                                <span id="valActiveTime" class="text-amberdark">10 mins</span>
+                            </div>
+                            <input type="range" id="calcActiveTime" min="1" max="40" value="10" oninput="updateCalc()" class="w-full accent-amberaccent">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <label for="calcNewBowls">New Dirty Bowls Generated</label>
+                                <span id="valNewBowls" class="text-amberdark">1 bowl</span>
+                            </div>
+                            <input type="range" id="calcNewBowls" min="0" max="5" value="1" oninput="updateCalc()" class="w-full accent-amberaccent">
+                        </div>
+
+                        <hr class="border-warmborder">
+
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-amberdark">Dual-Appliance Heuristic Variables $h(n)$</h3>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <label for="calcRemainingStove">Remaining Gas Stove Time (Dhal + Chicken)</label>
+                                <span id="valRemainingStove" class="text-amberdark">40 mins</span>
+                            </div>
+                            <input type="range" id="calcRemainingStove" min="0" max="40" value="40" oninput="updateCalc()" class="w-full accent-amberaccent">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <label for="calcRemainingRc">Remaining Rice Cooker Time (Rice)</label>
+                                <span id="valRemainingRc" class="text-blue-600">20 mins</span>
+                            </div>
+                            <input type="range" id="calcRemainingRc" min="0" max="20" value="20" oninput="updateCalc()" class="w-full accent-blue-600">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <label for="calcTotalBowls">Total Dirty Bowls in Sink</label>
+                                <span id="valTotalBowls" class="text-amberdark">1 bowl</span>
+                            </div>
+                            <input type="range" id="calcTotalBowls" min="0" max="6" value="1" oninput="updateCalc()" class="w-full accent-amberaccent">
+                        </div>
+                    </div>
+
+                    <!-- Results Output Panel -->
+                    <div class="flex flex-col justify-between space-y-4">
+                        <div class="bg-slate-900 text-white p-6 rounded-xl space-y-4">
+                            <h3 class="text-xs font-bold text-amber-400 uppercase tracking-widest">Mathematical Evaluation Result</h3>
+                            
+                            <div class="grid grid-cols-2 gap-4 border-b border-slate-700 pb-4">
+                                <div>
+                                    <span class="text-[11px] text-slate-400 block">Step Cost Equation $g(n)$</span>
+                                    <span class="text-slate-200 text-xs font-mono">Minutes + (2 × Bowls)</span>
+                                    <div id="calcGResult" class="text-2xl font-bold text-amber-400 mt-1">12</div>
+                                </div>
+                                <div>
+                                    <span class="text-[11px] text-slate-400 block">Heuristic Equation $h(n)$</span>
+                                    <span class="text-slate-200 text-xs font-mono">Max(Stove, RC) + 2B</span>
+                                    <div id="calcHResult" class="text-2xl font-bold text-emerald-400 mt-1">42</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="text-xs text-slate-400 block">Combined Evaluation $f(n) = g(n) + h(n)$</span>
+                                <div id="calcFResult" class="text-3xl font-extrabold text-white mt-1">54</div>
+                            </div>
+                        </div>
+
+                        <!-- Admissibility Proof Box -->
+                        <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 text-xs text-emerald-900">
+                            <strong class="font-bold block mb-1">Dual-Appliance Admissibility Proof ($h(n) \le h^*(n)$):</strong>
+                            Because the Gas Stove and Electric Rice Cooker can cook concurrently in parallel, the lower bound on remaining passive time is $\max(\text{Stove Time}, \text{Rice Cooker Time})$. This max formulation never overestimates actual remaining cost, maintaining strict A* Search optimality.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 6: VIVA REFERENCE GUIDE ================= -->
+        <section id="sec-viva" class="space-y-6 hidden">
+            <div class="bg-white p-5 rounded-xl border border-warmborder shadow-sm">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">Dual-Appliance Formulation & Viva Reference Guide</h2>
+                <p class="text-xs text-slate-600 mb-6">Complete reference tables and Q&A prep for viva defense incorporating Dhal, Chicken, Rice, Gas Stove, Rice Cooker, and Dead Ends.</p>
+
+                <!-- State Representation Table -->
+                <div class="mb-8">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">📌 1. State Space Variable Vector $S = (H, S_{stove}, S_{rc}, B, P_d, P_c, P_r)$</h3>
+                    <div class="overflow-x-auto rounded-lg border border-warmborder">
+                        <table class="min-w-full divide-y divide-warmborder text-xs">
+                            <thead class="bg-warmbg text-slate-700 font-bold">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Variable</th>
+                                    <th class="px-3 py-2 text-left">Domain / Values</th>
+                                    <th class="px-3 py-2 text-left">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-warmborder bg-white text-slate-700 font-mono">
+                                <tr>
+                                    <td class="px-3 py-2 font-bold">$H$ (Human Status)</td>
+                                    <td class="px-3 py-2">`Free`, `Busy`</td>
+                                    <td class="px-3 py-2">Bottleneck 1: Only 1 active prep task allowed at a time.</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold">$S_{stove}$ (Gas Stove Status)</td>
+                                    <td class="px-3 py-2">`Free`, `Occupied`</td>
+                                    <td class="px-3 py-2">Appliance 1: 1 burner stove used for Dhal (15m) or Chicken (25m).</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold">$S_{rc}$ (Rice Cooker Status)</td>
+                                    <td class="px-3 py-2">`Free`, `Occupied`</td>
+                                    <td class="px-3 py-2">Appliance 2: Dedicated electric cooker used for Rice (20m passive cycle).</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold">$B$ (Dirty Bowls)</td>
+                                    <td class="px-3 py-2">Integer count ($\le 5$)</td>
+                                    <td class="px-3 py-2">Tracks bowl cleanup penalty. $B > 5$ triggers Sink Capacity Dead End!</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold">$P_d$ (Dhal Progress)</td>
+                                    <td class="px-3 py-2">`Raw`, `Prepped`, `Cooking`, `Done`</td>
+                                    <td class="px-3 py-2">Lifecycle state for Dhal curry (15m stove time).</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold">$P_c$ (Chicken Progress)</td>
+                                    <td class="px-3 py-2">`Raw`, `Prepped`, `Marinated`, `Cooking`, `Done`</td>
+                                    <td class="px-3 py-2">Lifecycle state for Chicken curry (3m prep + 25m stove).</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold">$P_r$ (Rice Progress)</td>
+                                    <td class="px-3 py-2">`Raw`, `Prepped`, `Cooking`, `Done`</td>
+                                    <td class="px-3 py-2">Lifecycle state for Rice (20m Rice Cooker cycle).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Dead-End Classification Table -->
+                <div class="mb-8">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">🛑 2. Dead-End & Violation Node Catalog</h3>
+                    <div class="overflow-x-auto rounded-lg border border-warmborder">
+                        <table class="min-w-full divide-y divide-warmborder text-xs">
+                            <thead class="bg-warmbg text-slate-700 font-bold">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Node ID</th>
+                                    <th class="px-3 py-2 text-left">Dead-End Type</th>
+                                    <th class="px-3 py-2 text-left">Violation Condition</th>
+                                    <th class="px-3 py-2 text-left">Why Search Prunes / Fails</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-warmborder bg-white text-slate-700 font-mono">
+                                <tr>
+                                    <td class="px-3 py-2 font-bold text-rose-600">E1</td>
+                                    <td class="px-3 py-2">Raw Cook Attempt</td>
+                                    <td class="px-3 py-2">Attempting to cook raw Chicken ($P_c=\text{Raw}$)</td>
+                                    <td class="px-3 py-2">Pruned: Ingredients must be prepped/marinated before cooking on stove.</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold text-rose-600">E2</td>
+                                    <td class="px-3 py-2">Sink Capacity Overflow</td>
+                                    <td class="px-3 py-2">Dirty bowl count $B > 5$</td>
+                                    <td class="px-3 py-2">Pruned: Kitchen sink is blocked; worker cannot perform prep until washed.</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold text-rose-600">E3</td>
+                                    <td class="px-3 py-2">Un-prepped Dhal Cook</td>
+                                    <td class="px-3 py-2">Attempting stove launch with raw Dhal ($P_d=\text{Raw}$)</td>
+                                    <td class="px-3 py-2">Pruned: Cannot cook Dhal without washing and measuring spices first.</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold text-rose-600">E4</td>
+                                    <td class="px-3 py-2">Burner Contention</td>
+                                    <td class="px-3 py-2">Loading Chicken when Stove $S_{stove}=\text{Occupied}$</td>
+                                    <td class="px-3 py-2">Pruned: Stove has only 1 burner. Dual cooking on stove is physical conflict.</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-3 py-2 font-bold text-rose-600">E5</td>
+                                    <td class="px-3 py-2">Un-washed Rice Cook</td>
+                                    <td class="px-3 py-2">Starting Rice Cooker with raw un-prepped Rice</td>
+                                    <td class="px-3 py-2">Pruned: Rice must be prepped and washed before turning on Rice Cooker.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Viva Defense Q&A -->
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">🎓 3. Viva Defense Questions & Answers</h3>
+                    <div class="space-y-3 text-xs">
+                        <div class="bg-warmbg p-3.5 rounded-lg border border-warmborder">
+                            <span class="font-bold text-amberdark block mb-1">Q1: Why does Breadth-First Search (BFS) fail to find the optimal path?</span>
+                            <p class="text-slate-700">BFS measures path length by edge depth count, not edge step costs $g(n)$. Because the sequential path takes 5 steps ($S_0 \rightarrow A \rightarrow B \rightarrow C \rightarrow D \rightarrow G$) while the parallel path takes 5 steps ($S_0 \rightarrow X \rightarrow Y \rightarrow Z \rightarrow W \rightarrow G$), BFS returns whichever path it encounters first in level order without considering time cost.</p>
+                        </div>
+                        <div class="bg-warmbg p-3.5 rounded-lg border border-warmborder">
+                            <span class="font-bold text-amberdark block mb-1">Q2: How does Depth-First Search (DFS) handle Dead-End nodes (E1-E5)?</span>
+                            <p class="text-slate-700">DFS blindly follows the deepest branch first. When it expands an invalid state (such as E1 - cooking raw chicken), it discovers no valid successor edges exist and is forced to backtrack. This wastes node expansions compared to A* Search.</p>
+                        </div>
+                        <div class="bg-warmbg p-3.5 rounded-lg border border-warmborder">
+                            <span class="font-bold text-amberdark block mb-1">Q3: Why is $h(n) = \max(\text{Stove Time}, \text{Rice Cooker Time}) + 2B$ admissible?</span>
+                            <p class="text-slate-700">Because the Gas Stove and Rice Cooker can operate simultaneously in parallel, total passive cooking time is bounded by whichever appliance requires the most remaining time ($\max$). Since equipment cannot finish faster than its physical cycle, this estimate never overestimates $h^*(n)$.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-warmborder py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
+            Kitchen Workflow Optimizer &bull; Multi-Algorithm & Full Combinatorial State-Space Search Visualizer
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // ================= GLOBAL 16-NODE STATE-SPACE GRAPH DATA =================
+        const nodesData = {
+            'S_0': { id: 'S_0', name: 'Start Node', g: 0, h: 40, f: 40, H: 'Free', S: 'Free', Src: 'Free', B: 0, Pd: 'Raw', Pc: 'Raw', Pr: 'Raw', status: 'valid', type: 'start', x: 50, y: 240, desc: 'Initial kitchen state: All 3 dishes raw, all equipment free.' },
+            
+            // Smart Parallel Branch
+            'X': { id: 'X', name: 'Triple-Batch Prep All 3', g: 12, h: 40, f: 52, H: 'Free', S: 'Free', Src: 'Free', B: 1, Pd: 'Prepped', Pc: 'Prepped', Pr: 'Prepped', status: 'valid', type: 'smart', x: 190, y: 350, desc: 'Batch-prepped Dhal, Chicken, & Rice into 1 shared bowl set.' },
+            'Y': { id: 'Y', name: 'Start RC & Stove', g: 16, h: 38, f: 54, H: 'Free', S: 'Occupied', Src: 'Occupied', B: 1, Pd: 'Cooking', Pc: 'Prepped', Pr: 'Cooking', status: 'valid', type: 'smart', x: 340, y: 350, desc: 'Started Rice Cooker (20m) & Dhal on Stove (15m) simultaneously!' },
+            'Z': { id: 'Z', name: 'Dhal Done & Marinate Chicken', g: 31, h: 25, f: 56, H: 'Free', S: 'Free', Src: 'Occupied', B: 1, Pd: 'Done', Pc: 'Marinated', Pr: 'Cooking', status: 'valid', type: 'smart', x: 490, y: 350, desc: 'Dhal finished on stove. Chicken marinated (3m) during wait.' },
+            'W': { id: 'W', name: 'Cook Chicken on Stove', g: 56, h: 2, f: 58, H: 'Free', S: 'Free', Src: 'Free', B: 1, Pd: 'Done', Pc: 'Done', Pr: 'Done', status: 'valid', type: 'smart', x: 650, y: 350, desc: 'Chicken cooked on stove (25m). Rice Cooker finished concurrently!' },
+            
+            // Sequential Suboptimal Branch
+            'A': { id: 'A', name: 'Prep Dhal Only', g: 7, h: 40, f: 47, H: 'Free', S: 'Free', Src: 'Free', B: 1, Pd: 'Prepped', Pc: 'Raw', Pr: 'Raw', status: 'valid', type: 'dumb', x: 180, y: 130, desc: 'Sequential path: Prepped dhal base separately.' },
+            'B': { id: 'B', name: 'Dhal Cooked (Stove)', g: 24, h: 25, f: 49, H: 'Free', S: 'Free', Src: 'Free', B: 1, Pd: 'Done', Pc: 'Raw', Pr: 'Raw', status: 'valid', type: 'dumb', x: 330, y: 130, desc: 'Sequential path: Dhal cooked on stove (15m).' },
+            'C': { id: 'C', name: 'Prep & Cook Rice in RC', g: 49, h: 25, f: 74, H: 'Free', S: 'Free', Src: 'Free', B: 2, Pd: 'Done', Pc: 'Raw', Pr: 'Done', status: 'valid', type: 'dumb', x: 480, y: 130, desc: 'Sequential path: Rice prepped & cooked in Rice Cooker (20m).' },
+            'D': { id: 'D', name: 'Prep Chicken Separately', g: 56, h: 25, f: 81, H: 'Free', S: 'Free', Src: 'Free', B: 3, Pd: 'Done', Pc: 'Prepped', Pr: 'Done', status: 'valid', type: 'dumb', x: 630, y: 130, desc: 'Sequential path: Chicken prepped separately.' },
+            
+            // Goal Node
+            'G': { id: 'G', name: 'Goal Node (Meal Ready)', g: 58, h: 0, f: 58, H: 'Free', S: 'Free', Src: 'Free', B: 0, Pd: 'Done', Pc: 'Done', Pr: 'Done', status: 'valid', type: 'goal', x: 800, y: 240, desc: 'Goal state: All 3 dishes cooked and sink cleaned.' },
+
+            // DEAD END NODES (Rule Violations & Capacity Bounds)
+            'E1': { id: 'E1', name: 'Cook Raw Un-Prepped Meat', g: 25, h: 99, f: 124, H: 'Busy', S: 'Occupied', Src: 'Free', B: 0, Pd: 'Raw', Pc: 'Raw', Pr: 'Raw', status: 'deadend', type: 'dead', x: 130, y: 450, desc: '❌ DEAD END E1: Attempted to cook raw chicken on stove without prepping! Illegal action.' },
+            'E2': { id: 'E2', name: 'Sink Capacity Overflow (>5 Bowls)', g: 30, h: 99, f: 129, H: 'Busy', S: 'Free', Src: 'Free', B: 6, Pd: 'Prepped', Pc: 'Prepped', Pr: 'Raw', status: 'deadend', type: 'dead', x: 280, y: 450, desc: '❌ DEAD END E2: Sink accumulated 6 dirty bowls! Kitchen stalled due to bowl limit capacity.' },
+            'E3': { id: 'E3', name: 'Un-prepped Dhal Stove Attempt', g: 15, h: 99, f: 114, H: 'Busy', S: 'Occupied', Src: 'Free', B: 0, Pd: 'Raw', Pc: 'Raw', Pr: 'Raw', status: 'deadend', type: 'dead', x: 120, y: 40, desc: '❌ DEAD END E3: Put unwashed raw Dhal straight on burner. Recipe ruined.' },
+            'E4': { id: 'E4', name: 'Stove Burner Contention', g: 35, h: 99, f: 134, H: 'Busy', S: 'Occupied', Src: 'Free', B: 2, Pd: 'Cooking', Pc: 'Cooking', Pr: 'Raw', status: 'deadend', type: 'dead', x: 420, y: 450, desc: '❌ DEAD END E4: Tried putting Chicken on Stove while Dhal was cooking. Burner collision!' },
+            'E5': { id: 'E5', name: 'Un-washed Rice Cooker Launch', g: 20, h: 99, f: 119, H: 'Busy', S: 'Free', Src: 'Occupied', B: 0, Pd: 'Raw', Pc: 'Raw', Pr: 'Raw', status: 'deadend', type: 'dead', x: 280, y: 40, desc: '❌ DEAD END E5: Turned on Rice Cooker with unwashed dry rice. Cooker scorched!' },
+            'E6': { id: 'E6', name: 'Idle Stove Waiting Waste', g: 65, h: 25, f: 90, H: 'Free', S: 'Free', Src: 'Free', B: 2, Pd: 'Done', Pc: 'Raw', Pr: 'Done', status: 'suboptimal', type: 'dead', x: 570, y: 450, desc: '❌ SUBOPTIMAL DEAD END E6: Left stove idle for 30 mins while waiting for rice. Massive time waste.' }
+        };
+
+        const edgesData = [
+            // Smart Path Edges
+            { from: 'S_0', to: 'X', weight: 12, type: 'smart' },
+            { from: 'X', to: 'Y', weight: 4, type: 'smart' },
+            { from: 'Y', to: 'Z', weight: 15, type: 'smart' },
+            { from: 'Z', to: 'W', weight: 25, type: 'smart' },
+            { from: 'W', to: 'G', weight: 2, type: 'smart' },
+            
+            // Dumb Path Edges
+            { from: 'S_0', to: 'A', weight: 7, type: 'dumb' },
+            { from: 'A', to: 'B', weight: 17, type: 'dumb' },
+            { from: 'B', to: 'C', weight: 25, type: 'dumb' },
+            { from: 'C', to: 'D', weight: 7, type: 'dumb' },
+            { from: 'D', to: 'G', weight: 27, type: 'dumb' },
+
+            // Dead End Edges
+            { from: 'S_0', to: 'E1', weight: 25, type: 'dead' },
+            { from: 'X', to: 'E2', weight: 18, type: 'dead' },
+            { from: 'S_0', to: 'E3', weight: 15, type: 'dead' },
+            { from: 'Y', to: 'E4', weight: 19, type: 'dead' },
+            { from: 'S_0', to: 'E5', weight: 20, type: 'dead' },
+            { from: 'C', to: 'E6', weight: 16, type: 'dead' }
+        ];
+
+        let selectedNodeId = 'S_0';
+        let currentAlgorithm = 'astar';
+        let graphFilterMode = 'all';
+
+        // ================= ALGORITHM EXECUTION TRACES =================
+        const algoTraces = {
+            astar: [
+                { step: 1, expanded: 'S_0', open: [{id:'S_0', f:40}], closed: [], minF: 40, deadCount: 0, title: 'Step 1: Init A* Search', desc: 'S_0 placed into OPEN priority queue sorted by f = g + h.', children: 'A(f=47), X(f=52), E1(f=124), E3(f=114), E5(f=119)' },
+                { step: 2, expanded: 'S_0', open: [{id:'A', f:47}, {id:'X', f:52}], closed: ['S_0'], minF: 47, deadCount: 0, title: 'Step 2: Expand S_0', desc: 'Children generated. Dead ends (E1, E5, E3) get high f-cost penalties and remain at back of queue.', children: 'A(47), X(52)' },
+                { step: 3, expanded: 'A', open: [{id:'B', f:49}, {id:'X', f:52}], closed: ['S_0', 'A'], minF: 49, deadCount: 0, title: 'Step 3: Expand Node A', desc: 'Node A expanded. Sequential path node B generated (f=49).', children: 'B(49)' },
+                { step: 4, expanded: 'B', open: [{id:'X', f:52}, {id:'C', f:74}], closed: ['S_0', 'A', 'B'], minF: 52, deadCount: 0, title: 'Step 4: Expand Node B', desc: 'Node B expanded. Node C f-cost jumps to 74! A* automatically pivots focus to Node X!', children: 'C(74)' },
+                { step: 5, expanded: 'X', open: [{id:'Y', f:54}, {id:'C', f:74}], closed: ['S_0', 'A', 'B', 'X'], minF: 54, deadCount: 0, title: 'Step 5: Expand Node X (Triple-Batch)', desc: 'Triple-batch prep launches Rice Cooker & Gas Stove concurrently (Node Y, f=54).', children: 'Y(54)' },
+                { step: 6, expanded: 'Y', open: [{id:'Z', f:56}, {id:'C', f:74}], closed: ['S_0', 'A', 'B', 'X', 'Y'], minF: 56, deadCount: 0, title: 'Step 6: Expand Node Y & Z', desc: 'Dhal stove cook completes, chicken marinated. Node W generated (f=58).', children: 'Z(56)' },
+                { step: 7, expanded: 'G', open: [{id:'C', f:74}], closed: ['S_0', 'A', 'B', 'X', 'Y', 'Z', 'W', 'G'], minF: 58, deadCount: 0, title: 'Step 7: Goal Reached!', desc: 'Goal node G popped from OPEN list. Optimal cost = 58 mins. Zero dead ends hit!', children: 'Goal Reached' }
+            ],
+            gbfs: [
+                { step: 1, expanded: 'S_0', open: [{id:'S_0', f:40}], closed: [], minF: 40, deadCount: 0, title: 'Step 1: Init Greedy Best-First', desc: 'OPEN priority queue sorted solely by h(n) heuristic (ignoring past cost g).', children: 'X(h=40), A(h=40)' },
+                { step: 2, expanded: 'S_0', open: [{id:'X', f:40}, {id:'A', f:40}], closed: ['S_0'], minF: 40, deadCount: 0, title: 'Step 2: Expand S_0', desc: 'X has low h=40. GBFS chooses Node X directly.', children: 'X(h=40)' },
+                { step: 3, expanded: 'X', open: [{id:'Y', f:38}], closed: ['S_0', 'X'], minF: 38, deadCount: 0, title: 'Step 3: Expand X', desc: 'Node Y generated with remaining heuristic h=38.', children: 'Y(h=38)' },
+                { step: 4, expanded: 'Y', open: [{id:'Z', f:25}], closed: ['S_0', 'X', 'Y'], minF: 25, deadCount: 0, title: 'Step 4: Expand Y', desc: 'Node Z generated with h=25.', children: 'Z(h=25)' },
+                { step: 5, expanded: 'Z', open: [{id:'W', f:2}], closed: ['S_0', 'X', 'Y', 'Z'], minF: 2, deadCount: 0, title: 'Step 5: Expand Z', desc: 'Chicken stove cook completes. Node W generated with h=2.', children: 'W(h=2)' },
+                { step: 6, expanded: 'G', open: [], closed: ['S_0', 'X', 'Y', 'Z', 'W', 'G'], minF: 0, deadCount: 0, title: 'Step 6: Goal Reached!', desc: 'Greedy search reached Goal in 6 expansions.', children: 'Goal Reached' }
+            ],
+            ucs: [
+                { step: 1, expanded: 'S_0', open: [{id:'S_0', f:0}], closed: [], minF: 0, deadCount: 0, title: 'Step 1: Init Uniform Cost Search', desc: 'UCS sorts OPEN queue strictly by cumulative path cost g(n). Heuristic ignored (h=0).', children: 'A(g=7), X(g=12), E3(g=15)' },
+                { step: 2, expanded: 'S_0', open: [{id:'A', f:7}, {id:'X', f:12}, {id:'E3', f:15}], closed: ['S_0'], minF: 7, deadCount: 0, title: 'Step 2: Expand S_0', desc: 'Node A expanded because g=7 is lowest cost so far.', children: 'A(g=7)' },
+                { step: 3, expanded: 'A', open: [{id:'X', f:12}, {id:'E3', f:15}, {id:'B', f:24}], closed: ['S_0', 'A'], minF: 12, deadCount: 0, title: 'Step 3: Expand A', desc: 'Node X expanded next because g=12 < 15.', children: 'X(g=12)' },
+                { step: 4, expanded: 'E3', open: [{id:'Y', f:16}, {id:'B', f:24}], closed: ['S_0', 'A', 'X', 'E3'], minF: 15, deadCount: 1, title: 'Step 4: Expand E3 (Dead End Hit!)', desc: 'UCS expands dead-end E3 (g=15) because it ignores remaining work heuristic!', children: 'Dead End Pruned' },
+                { step: 5, expanded: 'Y', open: [{id:'B', f:24}, {id:'Z', f:31}], closed: ['S_0', 'A', 'X', 'E3', 'Y'], minF: 16, deadCount: 1, title: 'Step 5: Expand Y', desc: 'Parallel equipment launched (g=16).', children: 'Z(g=31)' },
+                { step: 6, expanded: 'G', open: [], closed: ['S_0', 'A', 'X', 'E3', 'Y', 'Z', 'W', 'G'], minF: 58, deadCount: 1, title: 'Step 6: Goal Reached!', desc: 'UCS finds optimal cost 58 but expands 11 total nodes and 1 dead end.', children: 'Goal Reached' }
+            ],
+            bfs: [
+                { step: 1, expanded: 'S_0', open: [{id:'S_0', f:0}], closed: [], minF: 0, deadCount: 0, title: 'Step 1: Init BFS (FIFO Queue)', desc: 'Breadth-First Search evaluates nodes level by level in FIFO order.', children: 'A, X, E1, E3, E5' },
+                { step: 2, expanded: 'S_0', open: [{id:'A', f:1}, {id:'X', f:1}, {id:'E1', f:1}, {id:'E3', f:1}], closed: ['S_0'], minF: 1, deadCount: 0, title: 'Step 2: Expand Level 1', desc: 'Evaluates all level 1 neighbors.', children: 'A, X, E1, E3' },
+                { step: 3, expanded: 'E1', open: [{id:'X', f:1}, {id:'B', f:2}, {id:'Y', f:2}], closed: ['S_0', 'A', 'E1'], minF: 1, deadCount: 1, title: 'Step 3: Expand E1 (Dead End!)', desc: 'BFS hits Dead End E1 (raw meat on stove). Prunes branch.', children: 'Dead End' },
+                { step: 4, expanded: 'E3', open: [{id:'B', f:2}, {id:'Y', f:2}, {id:'E2', f:2}], closed: ['S_0', 'A', 'E1', 'X', 'E3'], minF: 1, deadCount: 2, title: 'Step 4: Expand E3 (Dead End 2!)', desc: 'BFS hits 2nd Dead End E3. Blind search wastes steps on invalid states.', children: 'Dead End' },
+                { step: 5, expanded: 'G', open: [], closed: ['S_0', 'A', 'B', 'C', 'D', 'G'], minF: 5, deadCount: 2, title: 'Step 5: Sequential Path Goal (Suboptimal!)', desc: 'BFS encounters Goal G via sequential path (83m) because both paths have 5 depth steps!', children: 'Sequential Path Found' }
+            ],
+            dfs: [
+                { step: 1, expanded: 'S_0', open: [{id:'S_0', f:0}], closed: [], minF: 0, deadCount: 0, title: 'Step 1: Init DFS (LIFO Stack)', desc: 'Depth-First Search explores deeply down the leftmost branch first using LIFO stack.', children: 'A, E3, E5, E1, X' },
+                { step: 2, expanded: 'E3', open: [{id:'E3', f:1}], closed: ['S_0'], minF: 1, deadCount: 1, title: 'Step 2: Dives into E3 (Dead End!)', desc: 'DFS dives into E3 (Un-prepped Dhal stove attempt). Hits wall and backtracks.', children: 'Dead End -> Backtrack' },
+                { step: 3, expanded: 'E5', open: [{id:'E5', f:1}], closed: ['S_0', 'E3'], minF: 1, deadCount: 2, title: 'Step 3: Dives into E5 (Dead End!)', desc: 'DFS backtracks and dives into E5 (Un-washed Rice Cooker launch). Hits wall again!', children: 'Dead End -> Backtrack' },
+                { step: 4, expanded: 'A', open: [{id:'A', f:1}], closed: ['S_0', 'E3', 'E5'], minF: 1, deadCount: 2, title: 'Step 4: Dives into Sequential Branch', desc: 'DFS explores Sequential branch (A -> B -> C -> D).', children: 'B, C, D' },
+                { step: 5, expanded: 'E6', open: [{id:'E6', f:4}], closed: ['S_0', 'E3', 'E5', 'A', 'B', 'C', 'E6'], minF: 4, deadCount: 3, title: 'Step 5: Hits E6 Suboptimal Dead End', desc: 'DFS wanders into idle stove waste state E6 before backtracking to D.', children: 'Backtrack to D' },
+                { step: 6, expanded: 'G', open: [], closed: ['S_0', 'E3', 'E5', 'A', 'B', 'C', 'E6', 'D', 'G'], minF: 5, deadCount: 4, title: 'Step 6: Goal via Suboptimal Path (83m)', desc: 'DFS finishes via sequential path with cost 83 minutes after hitting 4 dead ends!', children: 'Goal Reached (Suboptimal)' }
+            ]
+        };
+
+        let currentTraceIdx = 0;
+        let traceTimer = null;
+
+        // ================= TAB NAVIGATION =================
+        function switchTab(tabId) {
+            const tabs = ['graph', 'trace', 'kitchen', 'charts', 'calculator', 'viva'];
+            tabs.forEach(t => {
+                document.getElementById('sec-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('tab-active');
+                document.getElementById('tab-' + t).classList.add('text-slate-600');
+            });
+
+            document.getElementById('sec-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('tab-active');
+            document.getElementById('tab-' + tabId).classList.remove('text-slate-600');
+
+            if (tabId === 'graph') drawGraph();
+            if (tabId === 'charts') renderCharts();
+        }
+
+        // ================= GLOBAL ALGORITHM SWITCHER =================
+        function changeGlobalAlgorithm(algo) {
+            currentAlgorithm = algo;
+            document.getElementById('globalAlgoSelect').value = algo;
+            
+            // Update Header Badges
+            const algoNames = {
+                astar: 'A* Search (f = g + h)',
+                gbfs: 'Greedy Best-First Search (f = h)',
+                ucs: 'Uniform Cost Search (f = g)',
+                bfs: 'Breadth-First Search (BFS)',
+                dfs: 'Depth-First Search (DFS)'
+            };
+            document.getElementById('traceAlgoBadge').innerText = algoNames[algo];
+            document.getElementById('traceAlgoNameTitle').innerText = `${algoNames[algo].toUpperCase()} EXECUTION`;
+
+            const optimalCosts = { astar: '58 mins', gbfs: '58 mins', ucs: '58 mins', bfs: '83 mins', dfs: '83 mins' };
+            const nodesExp = { astar: '7 / 16', gbfs: '6 / 16', ucs: '11 / 16', bfs: '12 / 16', dfs: '14 / 16' };
+            document.getElementById('hdrOptimalCost').innerText = optimalCosts[algo];
+            document.getElementById('hdrNodesExpanded').innerText = nodesExp[algo];
+
+            resetTrace();
+            drawGraph();
+        }
+
+        // ================= CANVAS FULL GRAPH EXPLORER =================
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawGraph();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawGraph() {
+            if (!canvas.width || !canvas.height) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const scaleX = canvas.width / 900;
+            const scaleY = canvas.height / 500;
+
+            const activePathNodes = algoTraces[currentAlgorithm][algoTraces[currentAlgorithm].length - 1].closed;
+
+            // Draw Edges
+            edgesData.forEach(edge => {
+                const fromNode = nodesData[edge.from];
+                const toNode = nodesData[edge.to];
+
+                const fx = fromNode.x * scaleX;
+                const fy = fromNode.y * scaleY;
+                const tx = toNode.x * scaleX;
+                const ty = toNode.y * scaleY;
+
+                let strokeStyle = '#e2e8f0';
+                let lineWidth = 1.5;
+                let isDashed = false;
+
+                const inActiveAlgoPath = activePathNodes.includes(edge.from) && activePathNodes.includes(edge.to);
+
+                if (graphFilterMode === 'smart' && edge.type === 'smart') {
+                    strokeStyle = '#059669';
+                    lineWidth = 4;
+                } else if (graphFilterMode === 'deadends' && edge.type === 'dead') {
+                    strokeStyle = '#e11d48';
+                    lineWidth = 3;
+                    isDashed = true;
+                } else if (graphFilterMode === 'algo' && inActiveAlgoPath) {
+                    strokeStyle = '#b45309';
+                    lineWidth = 3.5;
+                } else if (graphFilterMode === 'all') {
+                    if (edge.type === 'smart') strokeStyle = '#10b981';
+                    else if (edge.type === 'dumb') strokeStyle = '#f43f5e';
+                    else if (edge.type === 'dead') { strokeStyle = '#94a3b8'; isDashed = true; }
+                    lineWidth = 2;
+                }
+
+                ctx.beginPath();
+                if (isDashed) ctx.setLineDash([4, 4]);
+                else ctx.setLineDash([]);
+
+                ctx.moveTo(fx, fy);
+                ctx.lineTo(tx, ty);
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = lineWidth;
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Edge Weight Badge
+                const mx = (fx + tx) / 2;
+                const my = (fy + ty) / 2;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(mx, my, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = '#334155';
+                ctx.font = 'bold 9px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(edge.weight, mx, my);
+            });
+
+            // Draw Nodes
+            Object.values(nodesData).forEach(node => {
+                const nx = node.x * scaleX;
+                const ny = node.y * scaleY;
+                const isSelected = node.id === selectedNodeId;
+
+                let fillStyle = '#ffffff';
+                let strokeStyle = '#334155';
+
+                if (node.type === 'start' || node.type === 'goal') {
+                    fillStyle = '#fef3c7';
+                    strokeStyle = '#d97706';
+                } else if (node.type === 'smart') {
+                    fillStyle = '#d1fae5';
+                    strokeStyle = '#059669';
+                } else if (node.type === 'dumb') {
+                    fillStyle = '#ffe4e6';
+                    strokeStyle = '#e11d48';
+                } else if (node.type === 'dead') {
+                    fillStyle = '#f1f5f9';
+                    strokeStyle = '#64748b';
+                }
+
+                if (node.status === 'deadend') {
+                    fillStyle = '#fee2e2';
+                    strokeStyle = '#dc2626';
+                }
+
+                ctx.beginPath();
+                ctx.arc(nx, ny, isSelected ? 20 : 16, 0, Math.PI * 2);
+                ctx.fillStyle = fillStyle;
+                ctx.fill();
+                ctx.lineWidth = isSelected ? 4 : 2;
+                ctx.strokeStyle = isSelected ? '#3b82f6' : strokeStyle;
+                ctx.stroke();
+
+                // Node ID Text
+                ctx.fillStyle = node.status === 'deadend' ? '#991b1b' : '#0f172a';
+                ctx.font = 'bold 10px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.id, nx, ny - 1);
+
+                // Dead End Cross mark overlay
+                if (node.status === 'deadend') {
+                    ctx.fillStyle = '#dc2626';
+                    ctx.font = 'bold 12px monospace';
+                    ctx.fillText('❌', nx + 14, ny - 14);
+                }
+
+                // Heuristic Label below
+                ctx.fillStyle = '#64748b';
+                ctx.font = '9px monospace';
+                ctx.fillText(`h=${node.h}`, nx, ny + 24);
+            });
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            const scaleX = canvas.width / 900;
+            const scaleY = canvas.height / 500;
+
+            Object.values(nodesData).forEach(node => {
+                const nx = node.x * scaleX;
+                const ny = node.y * scaleY;
+                const dist = Math.hypot(clickX - nx, clickY - ny);
+                if (dist <= 22) {
+                    inspectNode(node.id);
+                }
+            });
+        });
+
+        function inspectNode(nodeId) {
+            selectedNodeId = nodeId;
+            const n = nodesData[nodeId];
+            document.getElementById('inspNodeId').innerText = `${n.id} (${n.name})`;
+            
+            const statusBadge = document.getElementById('inspNodeStatus');
+            if (n.status === 'deadend') {
+                statusBadge.innerText = '🛑 DEAD END VIOLATION';
+                statusBadge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-800';
+            } else {
+                statusBadge.innerText = 'VALID KITCHEN STATE';
+                statusBadge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800';
+            }
+
+            document.getElementById('inspH').innerText = n.H;
+            document.getElementById('inspS').innerText = n.S;
+            document.getElementById('inspSrc').innerText = n.Src;
+            document.getElementById('inspB').innerText = n.B;
+            document.getElementById('inspPd').innerText = n.Pd;
+            document.getElementById('inspPc').innerText = n.Pc;
+            document.getElementById('inspPr').innerText = n.Pr;
+            document.getElementById('inspG').innerText = n.g;
+            document.getElementById('inspHn').innerText = n.h;
+            document.getElementById('inspF').innerText = n.f;
+            document.getElementById('inspDesc').innerText = n.desc;
+
+            drawGraph();
+        }
+
+        function setGraphFilter(filter) {
+            graphFilterMode = filter;
+            
+            const btns = ['All', 'Algo', 'Dead', 'Smart'];
+            btns.forEach(b => {
+                const el = document.getElementById('btnFilter' + b);
+                if (el) {
+                    el.classList.remove('bg-amber-100', 'text-amberdark');
+                    el.classList.add('bg-slate-100', 'text-slate-700');
+                }
+            });
+
+            const activeBtnMap = { all: 'All', algo: 'Algo', deadends: 'Dead', smart: 'Smart' };
+            const activeEl = document.getElementById('btnFilter' + activeBtnMap[filter]);
+            if (activeEl) {
+                activeEl.classList.add('bg-amber-100', 'text-amberdark');
+            }
+
+            drawGraph();
+        }
+
+        // ================= TRACE STEP CONTROLLER =================
+        function renderTraceStep() {
+            const list = algoTraces[currentAlgorithm];
+            const data = list[currentTraceIdx];
+
+            document.getElementById('traceStepNum').innerText = `${data.step} / ${list.length}`;
+            document.getElementById('traceStepTitle').innerText = data.title;
+            document.getElementById('traceStepDesc').innerText = data.desc;
+            document.getElementById('traceMinF').innerText = data.minF;
+            document.getElementById('traceDeadCount').innerText = data.deadCount;
+
+            // Render OPEN List
+            const openContainer = document.getElementById('openListContainer');
+            openContainer.innerHTML = '';
+            data.open.forEach(item => {
+                const badge = document.createElement('span');
+                badge.className = 'px-2.5 py-1 text-xs font-mono font-bold rounded-lg border bg-white text-amberdark border-amber-300 shadow-sm';
+                badge.innerHTML = `${item.id} <span class="text-[10px] text-slate-500">(f=${item.f})</span>`;
+                openContainer.appendChild(badge);
+            });
+
+            // Render CLOSED List
+            const closedContainer = document.getElementById('closedListContainer');
+            closedContainer.innerHTML = '';
+            data.closed.forEach(id => {
+                const node = nodesData[id];
+                const badge = document.createElement('span');
+                if (node && node.status === 'deadend') {
+                    badge.className = 'px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-rose-100 text-rose-800 border border-rose-300';
+                    badge.innerText = `❌ ${id}`;
+                } else {
+                    badge.className = 'px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-slate-200 text-slate-700';
+                    badge.innerText = id;
+                }
+                closedContainer.appendChild(badge);
+            });
+
+            // Update Table
+            const tbody = document.getElementById('traceTableBody');
+            tbody.innerHTML = '';
+            for (let i = 0; i <= currentTraceIdx; i++) {
+                const row = list[i];
+                const node = nodesData[row.expanded];
+                const tr = document.createElement('tr');
+                tr.className = i === currentTraceIdx ? 'bg-amber-50/80 font-bold' : '';
+                tr.innerHTML = `
+                    <td class="px-3 py-2">${row.step}</td>
+                    <td class="px-3 py-2 ${node.status === 'deadend' ? 'text-rose-600' : 'text-amberdark'} font-bold">${row.expanded}</td>
+                    <td class="px-3 py-2 text-slate-600">${node ? node.name : ''}</td>
+                    <td class="px-3 py-2 text-center">${node ? node.g : 0}</td>
+                    <td class="px-3 py-2 text-center">${node ? node.h : 0}</td>
+                    <td class="px-3 py-2 text-center text-emerald-600 font-bold">${node ? node.f : 0}</td>
+                    <td class="px-3 py-2 text-slate-600">${row.children}</td>
+                    <td class="px-3 py-2 text-slate-800">${row.desc}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function traceNextStep() {
+            const list = algoTraces[currentAlgorithm];
+            if (currentTraceIdx < list.length - 1) {
+                currentTraceIdx++;
+                renderTraceStep();
+            } else {
+                stopTraceAutoPlay();
+            }
+        }
+
+        function tracePrevStep() {
+            if (currentTraceIdx > 0) {
+                currentTraceIdx--;
+                renderTraceStep();
+            }
+        }
+
+        function resetTrace() {
+            stopTraceAutoPlay();
+            currentTraceIdx = 0;
+            renderTraceStep();
+        }
+
+        function toggleTraceAutoPlay() {
+            if (traceTimer) {
+                stopTraceAutoPlay();
+            } else {
+                document.getElementById('btnTracePlay').innerText = '⏸️ Pause';
+                traceTimer = setInterval(() => {
+                    const list = algoTraces[currentAlgorithm];
+                    if (currentTraceIdx < list.length - 1) {
+                        traceNextStep();
+                    } else {
+                        stopTraceAutoPlay();
+                    }
+                }, 1800);
+            }
+        }
+
+        function stopTraceAutoPlay() {
+            if (traceTimer) {
+                clearInterval(traceTimer);
+                traceTimer = null;
+            }
+            document.getElementById('btnTracePlay').innerText = '▶️ Auto Play';
+        }
+
+        // ================= DUAL-APPLIANCE & DEAD-END SIMULATOR =================
+        const simData = {
+            smart: [
+                { step: 0, node: 'S_0', H: 'FREE', avatar: '🧘', action: 'Idle / Ready', mins: 0, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 0, dhal: 0, dhalSt: 'Raw', chicken: 0, chickenSt: 'Raw', rice: 0, riceSt: 'Raw' },
+                { step: 1, node: 'X', H: 'BUSY', avatar: '🔪', action: 'Triple-Batch Prep All 3 Dishes', mins: 10, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 1, dhal: 35, dhalSt: 'Prepped', chicken: 35, chickenSt: 'Prepped', rice: 35, riceSt: 'Prepped' },
+                { step: 2, node: 'Y', H: 'BUSY', avatar: '⚡', action: 'Start Rice Cooker & Put Dhal on Stove!', mins: 14, stove: 'COOKING', stoveIcon: '🔥', dish: 'Dhal Boiling (15m)', stoveMins: 15, rc: 'COOKING', rcIcon: '⚡', rcDish: 'Rice Steaming (20m)', rcMins: 20, bowls: 1, dhal: 65, dhalSt: 'Cooking', chicken: 35, chickenSt: 'Prepped', rice: 65, riceSt: 'Cooking' },
+                { step: 3, node: 'Z', H: 'BUSY', avatar: '🍗', action: 'Marinate Chicken (3m) During Stove Wait', mins: 17, stove: 'FREE', stoveIcon: '✨', dish: 'Dhal Cooked!', stoveMins: 15, rc: 'COOKING', rcIcon: '⚡', rcDish: 'Rice Steaming (5m left)', rcMins: 20, bowls: 1, dhal: 100, dhalSt: 'Done', chicken: 65, chickenSt: 'Marinated', rice: 85, riceSt: 'Cooking' },
+                { step: 4, node: 'W', H: 'BUSY', avatar: '🔥', action: 'Cook Chicken (25m) - Rice Finishes in Parallel', mins: 20, stove: 'COOKING', stoveIcon: '🔥', dish: 'Chicken Boiling (25m)', stoveMins: 40, rc: 'FREE', rcIcon: '✨', rcDish: 'Rice Ready!', rcMins: 20, bowls: 1, dhal: 100, dhalSt: 'Done', chicken: 100, chickenSt: 'Done', rice: 100, riceSt: 'Done' },
+                { step: 5, node: 'G', H: 'FREE', avatar: '✨', action: 'Wash 1 Prep Bowl & Serve Meal', mins: 22, stove: 'FREE', stoveIcon: '🧊', dish: 'Burner Free', stoveMins: 40, rc: 'FREE', rcIcon: '🍚', rcDish: 'Warm Mode', rcMins: 20, bowls: 0, dhal: 100, dhalSt: 'Done', chicken: 100, chickenSt: 'Done', rice: 100, riceSt: 'Done' }
+            ],
+            dumb: [
+                { step: 0, node: 'S_0', H: 'FREE', avatar: '🧘', action: 'Idle / Ready', mins: 0, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 0, dhal: 0, dhalSt: 'Raw', chicken: 0, chickenSt: 'Raw', rice: 0, riceSt: 'Raw' },
+                { step: 1, node: 'A', H: 'BUSY', avatar: '🔪', action: 'Prep Dhal Base Only', mins: 5, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 1, dhal: 35, dhalSt: 'Prepped', chicken: 0, chickenSt: 'Raw', rice: 0, riceSt: 'Raw' },
+                { step: 2, node: 'B', H: 'FREE', avatar: '⌛', action: 'Cook Dhal on Stove (15m)', mins: 7, stove: 'COOKING', stoveIcon: '🔥', dish: 'Dhal Boiling (15m)', stoveMins: 15, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 1, dhal: 100, dhalSt: 'Done', chicken: 0, chickenSt: 'Raw', rice: 0, riceSt: 'Raw' },
+                { step: 3, node: 'C', H: 'BUSY', avatar: '🍚', action: 'Prep & Cook Rice in Rice Cooker (20m)', mins: 12, stove: 'FREE', stoveIcon: '🧊', dish: 'Burner Free', stoveMins: 15, rc: 'COOKING', rcIcon: '⚡', rcDish: 'Rice Steaming (20m)', rcMins: 20, bowls: 2, dhal: 100, dhalSt: 'Done', chicken: 0, chickenSt: 'Raw', rice: 100, riceSt: 'Done' },
+                { step: 4, node: 'D', H: 'BUSY', avatar: '🔪', action: 'Prep Chicken Base Separately', mins: 17, stove: 'FREE', stoveIcon: '🧊', dish: 'Burner Free', stoveMins: 15, rc: 'FREE', rcIcon: '✨', rcDish: 'Rice Ready', rcMins: 20, bowls: 3, dhal: 100, dhalSt: 'Done', chicken: 35, chickenSt: 'Prepped', rice: 100, riceSt: 'Done' },
+                { step: 5, node: 'G', H: 'BUSY', avatar: '🔥', action: 'Cook Chicken on Stove (25m)', mins: 22, stove: 'COOKING', stoveIcon: '🔥', dish: 'Chicken Boiling (25m)', stoveMins: 40, rc: 'FREE', rcIcon: '🍚', rcDish: 'Warm Mode', rcMins: 20, bowls: 3, dhal: 100, dhalSt: 'Done', chicken: 100, chickenSt: 'Done', rice: 100, riceSt: 'Done' }
+            ],
+            dead1: [
+                { step: 0, node: 'S_0', H: 'FREE', avatar: '🧘', action: 'Idle / Ready', mins: 0, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 0, dhal: 0, dhalSt: 'Raw', chicken: 0, chickenSt: 'Raw', rice: 0, riceSt: 'Raw' },
+                { step: 1, node: 'E1', H: 'BUSY', avatar: '🛑', action: '❌ DEAD END E1: Cook Raw Meat directly on Stove!', mins: 2, stove: 'OCCUPIED', stoveIcon: '💥', dish: 'Raw Chicken Scorched!', stoveMins: 2, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 0, dhal: 0, dhalSt: 'Raw', chicken: 0, chickenSt: 'Ruined', rice: 0, riceSt: 'Raw' }
+            ],
+            dead2: [
+                { step: 0, node: 'S_0', H: 'FREE', avatar: '🧘', action: 'Idle / Ready', mins: 0, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 0, dhal: 0, dhalSt: 'Raw', chicken: 0, chickenSt: 'Raw', rice: 0, riceSt: 'Raw' },
+                { step: 1, node: 'X', H: 'BUSY', avatar: '🔪', action: 'Prep Bases Separately with Multiple Bowls', mins: 10, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 4, dhal: 35, dhalSt: 'Prepped', chicken: 35, chickenSt: 'Prepped', rice: 0, riceSt: 'Raw' },
+                { step: 2, node: 'E2', H: 'BUSY', avatar: '🛑', action: '❌ DEAD END E2: Sink Bowl Capacity Overflow (>5 Bowls)!', mins: 15, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 6, dhal: 35, dhalSt: 'Prepped', chicken: 35, chickenSt: 'Prepped', rice: 0, riceSt: 'Raw' }
+            ],
+            dead3: [
+                { step: 0, node: 'S_0', H: 'FREE', avatar: '🧘', action: 'Idle / Ready', mins: 0, stove: 'FREE', stoveIcon: '🧊', dish: 'Empty Burner', stoveMins: 0, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 0, dhal: 0, dhalSt: 'Raw', chicken: 0, chickenSt: 'Raw', rice: 0, riceSt: 'Raw' },
+                { step: 1, node: 'Y', H: 'BUSY', avatar: '⚡', action: 'Dhal Boiling on Gas Stove Burner', mins: 5, stove: 'COOKING', stoveIcon: '🔥', dish: 'Dhal Cooking (15m)', stoveMins: 5, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 1, dhal: 50, dhalSt: 'Cooking', chicken: 35, chickenSt: 'Prepped', rice: 0, riceSt: 'Raw' },
+                { step: 2, node: 'E4', H: 'BUSY', avatar: '🛑', action: '❌ DEAD END E4: Tried loading Chicken on occupied Stove!', mins: 7, stove: 'OCCUPIED', stoveIcon: '⚠️', dish: 'Burner Contention Collision!', stoveMins: 5, rc: 'FREE', rcIcon: '🍚', rcDish: 'Cooker Off', rcMins: 0, bowls: 2, dhal: 50, dhalSt: 'Cooking', chicken: 35, chickenSt: 'Prepped', rice: 0, riceSt: 'Raw' }
+            ]
+        };
+
+        let currentSimPath = 'smart';
+        let currentSimIdx = 0;
+        let simTimer = null;
+
+        function updateSimUI() {
+            const pathList = simData[currentSimPath];
+            const state = pathList[currentSimIdx];
+
+            document.getElementById('simStepIdx').innerText = state.step;
+            document.getElementById('simMaxStep').innerText = pathList.length - 1;
+            document.getElementById('simScrubber').max = pathList.length - 1;
+            document.getElementById('simCurrentNodeLabel').innerText = `Node ${state.node} (${nodesData[state.node].name})`;
+            document.getElementById('simScrubber').value = state.step;
+
+            // Human
+            document.getElementById('simHumanBadge').innerText = state.H;
+            document.getElementById('simHumanBadge').className = `px-2 py-0.5 text-[10px] font-bold rounded-full ${state.H === 'FREE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amberdark'}`;
+            document.getElementById('simHumanAvatar').innerText = state.avatar;
+            document.getElementById('simHumanAction').innerText = state.action;
+            document.getElementById('simActiveMins').innerText = state.mins;
+
+            // Gas Stove
+            document.getElementById('simStoveBadge').innerText = state.stove;
+            document.getElementById('simStoveBadge').className = `px-2 py-0.5 text-[10px] font-bold rounded-full ${state.stove === 'FREE' ? 'bg-slate-200 text-slate-700' : 'bg-orange-100 text-orange-800'}`;
+            document.getElementById('simStoveIcon').innerText = state.stoveIcon;
+            document.getElementById('simStoveDish').innerText = state.dish;
+            document.getElementById('simStoveMins').innerText = state.stoveMins;
+
+            // Rice Cooker
+            document.getElementById('simRcBadge').innerText = state.rc;
+            document.getElementById('simRcBadge').className = `px-2 py-0.5 text-[10px] font-bold rounded-full ${state.rc === 'FREE' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-800'}`;
+            document.getElementById('simRcIcon').innerText = state.rcIcon;
+            document.getElementById('simRcDish').innerText = state.rcDish;
+            document.getElementById('simRcMins').innerText = state.rcMins;
+
+            // Bowls
+            document.getElementById('simBowlBadge').innerText = `${state.bowls} Bowl(s)`;
+            document.getElementById('simBowlPenalty').innerText = `+${state.bowls * 2}`;
+            
+            const bowlVis = document.getElementById('simBowlVisual');
+            bowlVis.innerHTML = '';
+            if (state.bowls === 0) {
+                bowlVis.innerHTML = '<span class="text-emerald-500 text-xs font-bold">✨ Sink Clean</span>';
+            } else if (state.bowls > 5) {
+                bowlVis.innerHTML = '<span class="text-rose-600 text-xs font-bold">💥 SINK OVERFLOWED!</span>';
+            } else {
+                for (let i = 0; i < state.bowls; i++) bowlVis.innerHTML += '🥣 ';
+            }
+
+            // Recipe Bars
+            document.getElementById('simDhalStatus').innerText = state.dhalSt;
+            document.getElementById('simDhalBar').style.width = `${state.dhal}%`;
+            document.getElementById('simChickenStatus').innerText = state.chickenSt;
+            document.getElementById('simChickenBar').style.width = `${state.chicken}%`;
+            document.getElementById('simRiceStatus').innerText = state.riceSt;
+            document.getElementById('simRiceBar').style.width = `${state.rice}%`;
+        }
+
+        function changeSimPath() {
+            currentSimPath = document.getElementById('simPathSelect').value;
+            currentSimIdx = 0;
+            updateSimUI();
+        }
+
+        function scrubSim(val) {
+            currentSimIdx = parseInt(val);
+            updateSimUI();
+        }
+
+        function toggleSimPlay() {
+            if (simTimer) {
+                clearInterval(simTimer);
+                simTimer = null;
+                document.getElementById('btnSimPlay').innerText = '▶️ Animate';
+            } else {
+                document.getElementById('btnSimPlay').innerText = '⏸️ Pause';
+                simTimer = setInterval(() => {
+                    const pathList = simData[currentSimPath];
+                    if (currentSimIdx < pathList.length - 1) {
+                        currentSimIdx++;
+                        updateSimUI();
+                    } else {
+                        clearInterval(simTimer);
+                        simTimer = null;
+                        document.getElementById('btnSimPlay').innerText = '▶️ Animate';
+                    }
+                }, 1600);
+            }
+        }
+
+        function resetSim() {
+            if (simTimer) clearInterval(simTimer);
+            simTimer = null;
+            document.getElementById('btnSimPlay').innerText = '▶️ Animate';
+            currentSimIdx = 0;
+            updateSimUI();
+        }
+
+        // ================= CHART.JS ANALYTICS =================
+        let costChartInstance = null;
+        let breakdownChartInstance = null;
+
+        function renderCharts() {
+            if (costChartInstance) costChartInstance.destroy();
+            if (breakdownChartInstance) breakdownChartInstance.destroy();
+
+            // Cost Progression Chart
+            const ctxCost = document.getElementById('costProgressionChart').getContext('2d');
+            costChartInstance = new Chart(ctxCost, {
+                type: 'line',
+                data: {
+                    labels: ['Start (S0)', 'Step 1', 'Step 2', 'Step 3', 'Step 4', 'Goal (G)'],
+                    datasets: [
+                        {
+                            label: 'A* Search (Optimal Parallel Path)',
+                            data: [0, 12, 16, 31, 56, 58],
+                            borderColor: '#059669',
+                            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.2
+                        },
+                        {
+                            label: 'Uniform Cost Search (UCS)',
+                            data: [0, 7, 12, 16, 31, 58],
+                            borderColor: '#b45309',
+                            borderWidth: 2,
+                            borderDash: [3, 3],
+                            fill: false
+                        },
+                        {
+                            label: 'BFS / DFS (Suboptimal Sequential)',
+                            data: [0, 7, 24, 49, 56, 83],
+                            borderColor: '#e11d48',
+                            backgroundColor: 'rgba(225, 29, 72, 0.05)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: 'Cumulative Cost g(n)' }, min: 0 }
+                    }
+                }
+            });
+
+            // Breakdown Chart: Nodes Expanded & Dead Ends
+            const ctxBreak = document.getElementById('breakdownChart').getContext('2d');
+            breakdownChartInstance = new Chart(ctxBreak, {
+                type: 'bar',
+                data: {
+                    labels: ['A* Search', 'GBFS', 'UCS / Dijkstra', 'BFS', 'DFS'],
+                    datasets: [
+                        {
+                            label: 'Valid Nodes Expanded',
+                            data: [7, 6, 10, 10, 10],
+                            backgroundColor: '#334155'
+                        },
+                        {
+                            label: 'Dead Ends Hit',
+                            data: [0, 0, 1, 2, 4],
+                            backgroundColor: '#e11d48'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, title: { display: true, text: 'Total Node Expansions' } }
+                    }
+                }
+            });
+        }
+
+        // ================= CALCULATOR LOGIC =================
+        function updateCalc() {
+            const activeTime = parseInt(document.getElementById('calcActiveTime').value);
+            const newBowls = parseInt(document.getElementById('calcNewBowls').value);
+            const remainingStove = parseInt(document.getElementById('calcRemainingStove').value);
+            const remainingRc = parseInt(document.getElementById('calcRemainingRc').value);
+            const totalBowls = parseInt(document.getElementById('calcTotalBowls').value);
+
+            document.getElementById('valActiveTime').innerText = activeTime + ' mins';
+            document.getElementById('valNewBowls').innerText = newBowls + ' bowl(s)';
+            document.getElementById('valRemainingStove').innerText = remainingStove + ' mins';
+            document.getElementById('valRemainingRc').innerText = remainingRc + ' mins';
+            document.getElementById('valTotalBowls').innerText = totalBowls + ' bowl(s)';
+
+            const g = activeTime + (2 * newBowls);
+            const h = Math.max(remainingStove, remainingRc) + (2 * totalBowls);
+            const f = g + h;
+
+            document.getElementById('calcGResult').innerText = g;
+            document.getElementById('calcHResult').innerText = h;
+            document.getElementById('calcFResult').innerText = f;
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            resizeCanvas();
+            renderTraceStep();
+            updateSimUI();
+            updateCalc();
+        };
+    </script>
+</body>
+</html>

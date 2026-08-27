@@ -1,0 +1,150 @@
+{
+  "metadata": {
+    "title": "Sri Lankan Kitchen State-Space Search (With Branching & Constraint Termination)",
+    "is_undirected": false
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "S0: (Raw, Raw, Raw, Stove:Free)",
+        "x": 400,
+        "y": 80,
+        "heuristic": 50,
+        "state": "empty",
+        "neighbors": {
+          "S1: (Raw, DhalOnions, Raw, Free)": 4,
+          "S2: (Raw, BothOnions, Raw, Free)": 5,
+          "X1: INVALID (Cook Unmarinated Chicken)": 20
+        }
+      },
+      {
+        "name": "S1: (Raw, DhalOnions, Raw, Free)",
+        "x": 180,
+        "y": 200,
+        "heuristic": 46,
+        "state": "empty",
+        "neighbors": {
+          "S3: (Raw, BothOnions_Seq, Raw, Free)": 4,
+          "X2: INVALID (Cook Unwashed Dhal)": 15
+        }
+      },
+      {
+        "name": "S2: (Raw, BothOnions, Raw, Free)",
+        "x": 400,
+        "y": 200,
+        "heuristic": 45,
+        "state": "empty",
+        "neighbors": {
+          "S4: (RiceCooking, BothOnions, Raw, Free)": 4,
+          "X3: INVALID (Cook Both Curries on 1 Stove)": 30
+        }
+      },
+      {
+        "name": "X1: INVALID (Cook Unmarinated Chicken)",
+        "x": 680,
+        "y": 200,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "X2: INVALID (Cook Unwashed Dhal)",
+        "x": 80,
+        "y": 320,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "S3: (Raw, BothOnions_Seq, Raw, Free)",
+        "x": 260,
+        "y": 320,
+        "heuristic": 42,
+        "state": "empty",
+        "neighbors": {
+          "S4_Seq: (RiceCooking, BothOnions_Seq, Raw, Free)": 4
+        }
+      },
+      {
+        "name": "X3: INVALID (Cook Both Curries on 1 Stove)",
+        "x": 560,
+        "y": 320,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "S4: (RiceCooking, BothOnions, Raw, Free)",
+        "x": 400,
+        "y": 320,
+        "heuristic": 41,
+        "state": "empty",
+        "neighbors": {
+          "S5: (RiceCooking, BothOnions, ChkMarinated, Free)": 8
+        }
+      },
+      {
+        "name": "S4_Seq: (RiceCooking, BothOnions_Seq, Raw, Free)",
+        "x": 260,
+        "y": 420,
+        "heuristic": 38,
+        "state": "empty",
+        "neighbors": {
+          "S5_Seq: (RiceCooking, BothOnions_Seq, ChkMarinated, Free)": 8
+        }
+      },
+      {
+        "name": "S5: (RiceCooking, BothOnions, ChkMarinated, Free)",
+        "x": 400,
+        "y": 420,
+        "heuristic": 33,
+        "state": "empty",
+        "neighbors": {
+          "S6: (RiceCooking, DhalDone, ChkMarinated, Stove:Dhal)": 17
+        }
+      },
+      {
+        "name": "S5_Seq: (RiceCooking, BothOnions_Seq, ChkMarinated, Free)",
+        "x": 260,
+        "y": 520,
+        "heuristic": 30,
+        "state": "empty",
+        "neighbors": {
+          "S6_Seq: (RiceCooking, DhalDone, ChkMarinated, Stove:Dhal)": 17
+        }
+      },
+      {
+        "name": "S6: (RiceCooking, DhalDone, ChkMarinated, Stove:Dhal)",
+        "x": 400,
+        "y": 520,
+        "heuristic": 16,
+        "state": "empty",
+        "neighbors": {
+          "GOAL: (RiceDone, DhalDone, ChickenDone, Served)": 20
+        }
+      },
+      {
+        "name": "S6_Seq: (RiceCooking, DhalDone, ChkMarinated, Stove:Dhal)",
+        "x": 260,
+        "y": 620,
+        "heuristic": 16,
+        "state": "empty",
+        "neighbors": {
+          "GOAL: (RiceDone, DhalDone, ChickenDone, Served)": 20
+        }
+      },
+      {
+        "name": "GOAL: (RiceDone, DhalDone, ChickenDone, Served)",
+        "x": 400,
+        "y": 650,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {}
+      }
+    ],
+    "source": "S0: (Raw, Raw, Raw, Stove:Free)",
+    "goals": [
+      "GOAL: (RiceDone, DhalDone, ChickenDone, Served)"
+    ]
+  }
+}

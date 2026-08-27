@@ -1,0 +1,237 @@
+{
+  "metadata": {
+    "title": "Sri Lankan Kitchen State-Space Search Graph",
+    "is_undirected": false
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "S0: [Free, Free, Free, Raw, Raw, Raw]",
+        "x": 680,
+        "y": 50,
+        "heuristic": 41,
+        "state": "empty",
+        "neighbors": {
+          "S1: [Free, Free, Free, Raw, Prepped, Prepped] (Batch Prep BOTH)": 4,
+          "S2: [Free, Free, Free, Raw, Prepped, Raw] (Prep Dhal Only)": 4,
+          "X1: [Free, Busy, Free, Raw, Raw, Cooking] (Cook Raw Chicken)": 20,
+          "X4: [Free, Free, Busy, Cooking, Raw, Raw] (Dry Rice Launch)": 1
+        }
+      },
+      {
+        "name": "S1: [Free, Free, Free, Raw, Prepped, Prepped]",
+        "x": 900,
+        "y": 175,
+        "heuristic": 37,
+        "state": "empty",
+        "neighbors": {
+          "S3: [Free, Free, Busy, Cooking, Prepped, Prepped] (Start Rice Cooker)": 4,
+          "X3: [Free, Busy, Free, Raw, Cooking, Cooking] (Stove Collision)": 15
+        }
+      },
+      {
+        "name": "S2: [Free, Free, Free, Raw, Prepped, Raw]",
+        "x": 460,
+        "y": 175,
+        "heuristic": 45,
+        "state": "empty",
+        "neighbors": {
+          "S4: [Free, Free, Free, Raw, Prepped, Prepped] (Prep Chicken)": 4,
+          "S5: [Free, Busy, Free, Raw, Cooking, Raw] (Simmer Dhal First)": 15,
+          "X2: [Free, Busy, Free, Raw, Cooking, Raw] (Cook Unwashed Dhal)": 12
+        }
+      },
+      {
+        "name": "X1: [Free, Busy, Free, Raw, Raw, Cooking]",
+        "x": 1100,
+        "y": 175,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "X4: [Free, Free, Busy, Cooking, Raw, Raw]",
+        "x": 1260,
+        "y": 175,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "S3: [Free, Free, Busy, Cooking, Prepped, Prepped]",
+        "x": 900,
+        "y": 300,
+        "heuristic": 33,
+        "state": "empty",
+        "neighbors": {
+          "S6: [Free, Busy, Busy, Cooking, Cooking, Prepped] (Simmer Dhal)": 3
+        }
+      },
+      {
+        "name": "X3: [Free, Busy, Free, Raw, Cooking, Cooking]",
+        "x": 1080,
+        "y": 300,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "S4: [Free, Free, Free, Raw, Prepped, Prepped]",
+        "x": 460,
+        "y": 300,
+        "heuristic": 41,
+        "state": "empty",
+        "neighbors": {
+          "S7: [Free, Free, Busy, Cooking, Prepped, Prepped] (Start Rice Cooker)": 4,
+          "X5: [Free, Free, Free, Done, Prepped, Prepped] (Serve Uncooked Meal)": 10
+        }
+      },
+      {
+        "name": "S5: [Free, Busy, Free, Raw, Cooking, Raw]",
+        "x": 180,
+        "y": 300,
+        "heuristic": 55,
+        "state": "empty",
+        "neighbors": {
+          "S8: [Free, Free, Free, Raw, Done, Prepped] (Prep Chicken)": 4
+        }
+      },
+      {
+        "name": "X2: [Free, Busy, Free, Raw, Cooking, Raw]",
+        "x": 320,
+        "y": 300,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "X5: [Free, Free, Free, Done, Prepped, Prepped]",
+        "x": 640,
+        "y": 300,
+        "heuristic": 999,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "S6: [Free, Busy, Busy, Cooking, Cooking, Prepped]",
+        "x": 900,
+        "y": 425,
+        "heuristic": 30,
+        "state": "empty",
+        "neighbors": {
+          "S9: [Free, Free, Free, Done, Done, Prepped] (Dhal & Rice Finish)": 10
+        }
+      },
+      {
+        "name": "S7: [Free, Free, Busy, Cooking, Prepped, Prepped]",
+        "x": 460,
+        "y": 425,
+        "heuristic": 37,
+        "state": "empty",
+        "neighbors": {
+          "S10: [Free, Busy, Busy, Cooking, Cooking, Prepped] (Simmer Dhal)": 15
+        }
+      },
+      {
+        "name": "S8: [Free, Free, Free, Raw, Done, Prepped]",
+        "x": 180,
+        "y": 425,
+        "heuristic": 51,
+        "state": "empty",
+        "neighbors": {
+          "S11: [Free, Busy, Free, Raw, Done, Cooking] (Cook Chicken)": 20
+        }
+      },
+      {
+        "name": "S9: [Free, Free, Free, Done, Done, Prepped]",
+        "x": 900,
+        "y": 550,
+        "heuristic": 20,
+        "state": "empty",
+        "neighbors": {
+          "S12: [Free, Busy, Free, Done, Done, Cooking] (Cook Chicken)": 20
+        }
+      },
+      {
+        "name": "S10: [Free, Busy, Busy, Cooking, Cooking, Prepped]",
+        "x": 460,
+        "y": 550,
+        "heuristic": 20,
+        "state": "empty",
+        "neighbors": {
+          "S13: [Free, Busy, Free, Cooking, Done, Cooking] (Cook Chicken)": 20
+        }
+      },
+      {
+        "name": "S11: [Free, Busy, Free, Raw, Done, Cooking]",
+        "x": 180,
+        "y": 550,
+        "heuristic": 25,
+        "state": "empty",
+        "neighbors": {
+          "S14: [Free, Busy, Free, Cooking, Done, Done] (Cook Rice on Stove)": 25
+        }
+      },
+      {
+        "name": "S12: [Free, Busy, Free, Done, Done, Cooking]",
+        "x": 900,
+        "y": 675,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {
+          "G1: [Free, Free, Free, Done, Done, Done] (Dinner Served 41m)": 0
+        }
+      },
+      {
+        "name": "S13: [Free, Busy, Free, Cooking, Done, Cooking]",
+        "x": 460,
+        "y": 675,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {
+          "G2: [Free, Free, Free, Done, Done, Done] (Dinner Served 67m)": 0
+        }
+      },
+      {
+        "name": "S14: [Free, Busy, Free, Cooking, Done, Done]",
+        "x": 180,
+        "y": 675,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {
+          "G3: [Free, Free, Free, Done, Done, Done] (Dinner Served 100m)": 0
+        }
+      },
+      {
+        "name": "G1: [Free, Free, Free, Done, Done, Done]",
+        "x": 900,
+        "y": 800,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "G2: [Free, Free, Free, Done, Done, Done]",
+        "x": 460,
+        "y": 800,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {}
+      },
+      {
+        "name": "G3: [Free, Free, Free, Done, Done, Done]",
+        "x": 180,
+        "y": 800,
+        "heuristic": 0,
+        "state": "empty",
+        "neighbors": {}
+      }
+    ],
+    "source": "S0: [Free, Free, Free, Raw, Raw, Raw]",
+    "goals": [
+      "G1: [Free, Free, Free, Done, Done, Done]",
+      "G2: [Free, Free, Free, Done, Done, Done]",
+      "G3: [Free, Free, Free, Done, Done, Done]"
+    ]
+  }
+}
