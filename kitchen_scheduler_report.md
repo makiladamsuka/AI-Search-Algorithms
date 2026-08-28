@@ -50,17 +50,45 @@ $$\text{State Vector } S = [\text{Chef}, \,\, \text{GasStove}, \,\, \text{RiceCo
 
 ---
 
-## 📋 3. Master Table of Atomic Actions & Preparation Timing
+## 📋 3. Master Step-by-Step Action Table (Max 3-Word Action Definitions)
 
-| Action Code | Description | Appliance | Active Time | Passive Time | Total $g(n)$ Cost | 1-to-1 State Transition |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| **`B1`** | **Batch-chop onions & spices for BOTH curries at once** | Prep Counter | **5 mins** | 0 mins | **5 mins** | `Dhal: Raw->Prep` & `Chicken: Raw->Prep` |
-| **`R_RC`** | **Wash rice & launch Electric Rice Cooker (ONCE)**| Rice Cooker | **4 mins** | **20 mins** | **4 mins active** | `Rice: Raw -> Cooking` |
-| **`R_Stove`**| Wash rice & cook rice on Gas Stove (No RC) | Gas Stove | **5 mins** | **20 mins** | **25 mins** | `Rice: Raw -> Cooking -> Done` |
-| **`D_Prep`** | Chop onions & spices for Dhal only | Prep Counter | **4 mins** | 0 mins | **4 mins** | `Dhal: Raw -> Prepped` |
-| **`D_Stove`** | Temper spices & simmer Dhal Curry | Gas Stove | **3 mins** | **12 mins** | **15 mins** | `Dhal: Prepped -> Cooking -> Done` |
-| **`C_Prep`** | Cut chicken & prep onions for Chicken only | Prep Counter | **4 mins** | 0 mins | **4 mins** | `Chicken: Raw -> Prepped` |
-| **`C_Stove`**| Sauté & cook Chicken Curry on Gas Stove | Gas Stove | **5 mins** | **15 mins** | **20 mins** | `Chicken: Prepped -> Cooking -> Done` |
+### 🟢 Path 1: Optimal Parallel Path (Goal $G_1 = 42\text{ mins}$) ⭐
+
+| Step | Food State Transition | Kitchen Action | Step $\Delta g$ | Time Spent $g(n)$ | Remaining $h(n)$ | Total Score $f(n)$ |
+| :---: | :--- | :--- | :---: | :---: | :---: | :---: |
+| **`S0`** | `All Dishes: Raw` | **Start cooking** | `0m` | `0m` | `42m` | **`42m`** |
+| **`S0 → S1`** | `Dhal: Raw → Prep`<br>`Chicken: Raw → Prep` | **Batch chop veggies** | `5m` | `5m` | `37m` | **`42m`** |
+| **`S1 → S3`** | `Rice: Raw → Cook` | **Start rice cooker** | `4m` | `9m` | `33m` | **`42m`** |
+| **`S3 → S6`** | `Dhal: Prep → Cook` | **Simmer dhal stove** | `3m` | `12m` | `30m` | **`42m`** |
+| **`S6 → S9`** | `Dhal: Cook → Done`<br>`Rice: Cook → Done` | **Both dishes finish** | `10m` | `22m` | `20m` | **`42m`** |
+| **`S9 → S12`** | `Chicken: Prep → Cook` | **Cook chicken stove** | `20m` | `42m` | `0m` | **`42m`** |
+| **`S12 → G1`** | `Chicken: Cook → Done` | **Serve dinner meal** | `0m` | **`42m`** | **`0m`** | 🏆 **`42m` (Optimal)** |
+
+---
+
+### 🟡 Path 2: Standard Sequential Path (Goal $G_2 = 67\text{ mins}$)
+
+| Step | Food State Transition | Kitchen Action | Step $\Delta g$ | Time Spent $g(n)$ | Remaining $h(n)$ | Total Score $f(n)$ |
+| :---: | :--- | :--- | :---: | :---: | :---: | :---: |
+| **`S0 → S2`** | `Dhal: Raw → Prep` | **Prep dhal only** | `4m` | `4m` | `45m` | **`49m`** |
+| **`S2 → S4`** | `Chicken: Raw → Prep` | **Prep chicken only** | `4m` | `8m` | `41m` | **`49m`** |
+| **`S4 → S7`** | `Rice: Raw → Cook` | **Start rice cooker** | `4m` | `12m` | `37m` | **`49m`** |
+| **`S7 → S10`** | `Dhal: Prep → Done` | **Cook dhal stove** | `15m` | `27m` | `20m` | **`47m`** |
+| **`S10 → S13`**| `Chicken: Prep → Cook` | **Cook chicken stove** | `20m` | `47m` | `20m` | **`67m`** |
+| **`S13 → G2`** | `Chicken: Cook → Done` | **Serve dinner meal** | `0m` | **`67m`** | **`0m`** | **`67m` (Sequential)** |
+
+---
+
+### 🟠 Path 3: Single-Burner Bottleneck Path (Goal $G_3 = 100\text{ mins}$)
+
+| Step | Food State Transition | Kitchen Action | Step $\Delta g$ | Time Spent $g(n)$ | Remaining $h(n)$ | Total Score $f(n)$ |
+| :---: | :--- | :--- | :---: | :---: | :---: | :---: |
+| **`S0 → S2`** | `Dhal: Raw → Prep` | **Prep dhal only** | `4m` | `4m` | `55m` | **`59m`** |
+| **`S2 → S5`** | `Dhal: Prep → Cook` | **Simmer dhal stove** | `15m` | `19m` | `55m` | **`74m`** |
+| **`S5 → S8`** | `Chicken: Raw → Prep`<br>`Dhal: Cook → Done` | **Prep chicken counter** | `4m` | `23m` | `51m` | **`74m`** |
+| **`S8 → S11`** | `Chicken: Prep → Done` | **Cook chicken stove** | `20m` | `43m` | `25m` | **`68m`** |
+| **`S11 → S14`**| `Rice: Raw → Cook` | **Boil rice stove** | `25m` | `68m` | `32m` | **`100m`** |
+| **`S14 → G3`** | `Rice: Cook → Done` | **Serve dinner meal** | `0m` | **`100m`**| **`0m`** | 🟠 **`100m` (Stove-Only)** |
 
 ---
 

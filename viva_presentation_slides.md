@@ -99,21 +99,29 @@ $$\text{State Vector } S = [\text{Chef}, \,\, \text{GasStove}, \,\, \text{RiceCo
 
 ---
 
-## 🖥️ Slide 6: Visual State-Space Search Graph (23 Nodes & 3 Goals)
+## 🖥️ Slide 6: Master Action Tables (Max 3-Word Action Definitions)
 
 ### 🎨 Visual Layout:
-* Clean 3-Column Diagram showing the 3 distinct goal paths ($G_1, G_2, G_3$).
+* Clean 3-section table showing all paths with max 3-word action descriptions.
 
 ### 📝 Slide Content:
-* 🟢 **`G1` (42 Minutes)** ⭐:
-  `S0` $\xrightarrow{\text{Batch Prep BOTH (5m)}}$ `S1` $\xrightarrow{\text{Start Rice Cooker (4m)}}$ `S3` $\xrightarrow{\text{Simmer Dhal (3m)}}$ `S6` $\xrightarrow{\text{Dhal/Rice Finish (10m)}}$ `S9` $\xrightarrow{\text{Cook Chicken (20m)}}$ `S12` $\rightarrow$ **Goal G1 (42m)**
-* 🟡 **`G2` (67 Minutes)**:
-  `S0` $\xrightarrow{\text{Prep Dhal (4m)}}$ `S2` $\xrightarrow{\text{Prep Chicken (4m)}}$ `S4` $\xrightarrow{\text{Start Rice Cooker (4m)}}$ `S7` $\xrightarrow{\text{Simmer Dhal (15m)}}$ `S10` $\xrightarrow{\text{Cook Chicken (20m)}}$ `S13` $\rightarrow$ **Goal G2 (67m)**
-* 🟠 **`G3` (100 Minutes)**:
-  `S0` $\xrightarrow{\text{Prep Dhal (4m)}}$ `S2` $\xrightarrow{\text{Simmer Dhal (15m)}}$ `S5` $\xrightarrow{\text{Prep Chicken (4m)}}$ `S8` $\xrightarrow{\text{Cook Chicken (20m)}}$ `S11` $\xrightarrow{\text{Cook Rice Stove (25m)}}$ `S14` $\rightarrow$ **Goal G3 (100m)**
+
+#### 🟢 Path 1: Optimal Parallel Path (Goal $G_1 = 42\text{m}$) ⭐
+* `S0 → S1`: `Dhal: Prep` & `Chicken: Prep` | **Batch chop veggies** (5m) $\implies g=5\text{m}, h=37\text{m}, f=42\text{m}$
+* `S1 → S3`: `Rice: Cook` | **Start rice cooker** (4m) $\implies g=9\text{m}, h=33\text{m}, f=42\text{m}$
+* `S3 → S6`: `Dhal: Cook` | **Simmer dhal stove** (3m) $\implies g=12\text{m}, h=30\text{m}, f=42\text{m}$
+* `S6 → S9`: `Dhal: Done` & `Rice: Done` | **Both dishes finish** (10m) $\implies g=22\text{m}, h=20\text{m}, f=42\text{m}$
+* `S9 → S12`: `Chicken: Cook` | **Cook chicken stove** (20m) $\implies g=42\text{m}, h=0\text{m}, f=42\text{m}$
+* `S12 → G1`: `Chicken: Done` | **Serve dinner meal** (0m) $\implies \mathbf{g=42\text{m}, f=42\text{m}}$
+
+#### 🟡 Path 2: Standard Sequential Path (Goal $G_2 = 67\text{m}$)
+* `S0 → S2`: **Prep dhal only** (4m) | `S2 → S4`: **Prep chicken only** (4m) | `S4 → S7`: **Start rice cooker** (4m) | `S7 → S10`: **Cook dhal stove** (15m) | `S10 → S13`: **Cook chicken stove** (20m) | `S13 → G2`: **Serve dinner meal** (0m) $\implies \mathbf{g=67\text{m}}$
+
+#### 🟠 Path 3: Single-Burner Bottleneck Path (Goal $G_3 = 100\text{m}$)
+* `S0 → S2`: **Prep dhal only** (4m) | `S2 → S5`: **Simmer dhal stove** (15m) | `S5 → S8`: **Prep chicken counter** (4m) | `S8 → S11`: **Cook chicken stove** (20m) | `S11 → S14`: **Boil rice stove** (25m) | `S14 → G3`: **Serve dinner meal** (0m) $\implies \mathbf{g=100\text{m}}$
 
 ### 🗣️ Speaker Script:
-> *"Our search space contains 23 nodes organized into 3 distinct goal paths. Goal G1 is the 42-minute optimal path utilizing 5-minute batch prep and dual-appliance parallelism. Goal G2 is a 67-minute sequential path. Goal G3 is a 100-minute stove-only path."*
+> *"Our search space contains 3 distinct goal paths. Goal G1 is the 42-minute optimal path utilizing 5-minute batch prep and dual-appliance parallelism. Goal G2 is a 67-minute sequential path. Goal G3 is a 100-minute stove-only bottleneck path."*
 
 ---
 
