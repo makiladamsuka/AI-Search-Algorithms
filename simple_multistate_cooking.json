@@ -179,7 +179,7 @@
         "heuristic": 0,
         "state": "empty",
         "neighbors": {
-          "G1: [Free, Free, Free, Done, Done, Done] (Dinner Served 42m)": 0
+          "G1: [Free, Free, Free, Done, Done, Done] (Serve dinner meal)": 0
         }
       },
       {
@@ -189,7 +189,7 @@
         "heuristic": 0,
         "state": "empty",
         "neighbors": {
-          "G2: [Free, Free, Free, Done, Done, Done] (Dinner Served 67m)": 0
+          "G2: [Free, Free, Free, Done, Done, Done] (Serve dinner meal)": 0
         }
       },
       {
@@ -199,7 +199,7 @@
         "heuristic": 0,
         "state": "empty",
         "neighbors": {
-          "G3: [Free, Free, Free, Done, Done, Done] (Dinner Served 100m)": 0
+          "G3: [Free, Free, Free, Done, Done, Done] (Serve dinner meal)": 0
         }
       },
       {
