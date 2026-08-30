@@ -127,6 +127,11 @@
           <button onclick="closeDrawer()" class="text-slate-400 hover:text-white text-lg">✕</button>
         </div>
 
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Stage Visual Illustration</h3>
+        <div id="drawer-image-container" class="mb-4 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center h-44">
+          <img id="drawer-img" src="" alt="Stage Visual" class="h-full w-full object-cover">
+        </div>
+
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Kitchen State Vector Analysis</h3>
         <div class="grid grid-cols-2 gap-2 mb-6">
           <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700/60">
@@ -394,6 +399,21 @@
       document.getElementById('drawer-g').textContent = `${node.g} mins`;
       document.getElementById('drawer-h').textContent = `${node.h} mins`;
       document.getElementById('drawer-f').textContent = `${node.g + node.h} mins`;
+
+      // Set cartoon stage image
+      let imgSrc = 'images/kitchen_raw_ingredients_1788069958319.jpg';
+      if (node.id.startsWith('G')) {
+        imgSrc = 'images/g1_served_dinner_1788069590044.jpg';
+      } else if (['S1', 'S2', 'S4', 'X2', 'X3', 'X5'].includes(node.id)) {
+        imgSrc = 'images/batch_prep_veggies_1788069980345.jpg';
+      } else if (['S3', 'S7'].includes(node.id)) {
+        imgSrc = 'images/rice_cooker_steaming_1788070018462.jpg';
+      } else if (['S5', 'S6', 'S8', 'S10'].includes(node.id)) {
+        imgSrc = 'images/dhal_curry_simmering_1788070139252.jpg';
+      } else if (['S9', 'S11', 'S12', 'S13', 'S14'].includes(node.id)) {
+        imgSrc = 'images/cooking_pots_1788069893725.jpg';
+      }
+      document.getElementById('drawer-img').src = imgSrc;
 
       document.getElementById('node-drawer').classList.remove('translate-x-full');
     }
