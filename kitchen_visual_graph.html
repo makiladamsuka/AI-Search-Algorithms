@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sri Lankan Smart Kitchen - Visual State-Space Graph</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #0b0f19;
+      color: #f1f5f9;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    .node-card {
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .node-card:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-raw { background: #334155; color: #94a3b8; }
+    .badge-prepped { background: #0369a1; color: #7dd3fc; border: 1px solid #0284c7; }
+    .badge-cooking { background: #b45309; color: #fde68a; border: 1px solid #d97706; }
+    .badge-done { background: #047857; color: #a7f3d0; border: 1px solid #059669; }
+    .badge-busy { background: #991b1b; color: #fecaca; }
+    .badge-free { background: #1e293b; color: #cbd5e1; }
+    
+    .edge-line {
+      stroke-width: 2.5px;
+      transition: stroke 0.3s, stroke-width 0.3s;
+    }
+    .edge-optimal { stroke: #10b981; stroke-width: 3.5px; }
+    .edge-suboptimal { stroke: #f59e0b; stroke-width: 2px; }
+    .edge-deadend { stroke: #ef4444; stroke-width: 2px; stroke-dasharray: 4; }
+    .edge-default { stroke: #475569; }
+
+    .action-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col">
+
+  <!-- Top Navigation & Control Header -->
+  <header class="bg-[#0f172a]/90 backdrop-blur border-b border-slate-800 px-6 py-3 flex items-center justify-between z-20">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-lg">🍳</div>
+      <div>
+        <h1 class="font-bold text-base text-slate-100 flex items-center gap-2">
+          Sri Lankan Kitchen Workflow Visual Graph
+          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">CM2510 State-Space</span>
+        </h1>
+        <p class="text-xs text-slate-400">State Vector: <code class="text-emerald-400">[Chef, GasStove, RiceCooker, Rice, Dhal, Chicken]</code></p>
+      </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-lg border border-slate-800 text-xs">
+      <button onclick="setFilter('all')" id="btn-all" class="px-3 py-1.5 rounded font-medium bg-slate-800 text-white shadow">All Branches (23 Nodes)</button>
+      <button onclick="setFilter('optimal')" id="btn-optimal" class="px-3 py-1.5 rounded font-medium text-emerald-400 hover:bg-emerald-950/40">🟢 Path 1: Optimal (42m)</button>
+      <button onclick="setFilter('sequential')" id="btn-sequential" class="px-3 py-1.5 rounded font-medium text-amber-400 hover:bg-amber-950/40">🟡 Path 2: Sequential (67m)</button>
+      <button onclick="setFilter('stove')" id="btn-stove" class="px-3 py-1.5 rounded font-medium text-orange-400 hover:bg-orange-950/40">🟠 Path 3: Stove-Only (100m)</button>
+      <button onclick="setFilter('deadend')" id="btn-deadend" class="px-3 py-1.5 rounded font-medium text-rose-400 hover:bg-rose-950/40">❌ Dead Ends (X1-X5)</button>
+    </div>
+
+    <!-- View Controls -->
+    <div class="flex items-center gap-2 text-xs">
+      <button onclick="zoomBy(1.15)" class="p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-200">🔍+</button>
+      <button onclick="zoomBy(0.85)" class="p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-200">🔍-</button>
+      <button onclick="resetZoom()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-200 font-medium">Reset View</button>
+    </div>
+  </header>
+
+  <!-- Main Canvas Container -->
+  <main class="flex-1 relative overflow-hidden bg-[#070b14] cursor-grab active:cursor-grabbing" id="viewport">
+    <div id="canvas-container" class="absolute origin-top-left transition-transform duration-75">
+      <!-- SVG for Connecting Directed Edges -->
+      <svg id="edge-svg" class="absolute top-0 left-0 pointer-events-none" width="2200" height="1300">
+        <defs>
+          <marker id="arrow-optimal" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#10b981" />
+          </marker>
+          <marker id="arrow-suboptimal" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#f59e0b" />
+          </marker>
+          <marker id="arrow-deadend" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ef4444" />
+          </marker>
+          <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#64748b" />
+          </marker>
+        </defs>
+        <g id="edges-group"></g>
+      </svg>
+
+      <!-- HTML Nodes Container -->
+      <div id="nodes-container" class="relative w-[2200px] h-[1300px]"></div>
+    </div>
+
+    <!-- Node Detail Slide-Over Drawer -->
+    <aside id="node-drawer" class="absolute right-0 top-0 bottom-0 w-96 bg-slate-900/95 backdrop-blur border-l border-slate-800 p-6 transform translate-x-full transition-transform duration-300 z-30 shadow-2xl flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <div>
+            <span id="drawer-node-id" class="text-xl font-bold text-emerald-400">S0</span>
+            <span id="drawer-node-type" class="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Optimal Branch</span>
+          </div>
+          <button onclick="closeDrawer()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Kitchen State Vector Analysis</h3>
+        <div class="grid grid-cols-2 gap-2 mb-6">
+          <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700/60">
+            <div class="text-[11px] text-slate-400">👨‍🍳 Chef (H)</div>
+            <div id="drawer-chef" class="text-sm font-semibold text-slate-200">Free</div>
+          </div>
+          <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700/60">
+            <div class="text-[11px] text-slate-400">🔥 Gas Stove (S)</div>
+            <div id="drawer-stove" class="text-sm font-semibold text-slate-200">Free</div>
+          </div>
+          <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700/60">
+            <div class="text-[11px] text-slate-400">⚡ Rice Cooker (RC)</div>
+            <div id="drawer-rc" class="text-sm font-semibold text-slate-200">Free</div>
+          </div>
+          <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700/60">
+            <div class="text-[11px] text-slate-400">🍚 White Rice (R)</div>
+            <div id="drawer-rice" class="text-sm font-semibold text-slate-200">Raw</div>
+          </div>
+          <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700/60">
+            <div class="text-[11px] text-slate-400">🍲 Dhal Curry (D)</div>
+            <div id="drawer-dhal" class="text-sm font-semibold text-slate-200">Raw</div>
+          </div>
+          <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700/60">
+            <div class="text-[11px] text-slate-400">🍗 Chicken Curry (C)</div>
+            <div id="drawer-chicken" class="text-sm font-semibold text-slate-200">Raw</div>
+          </div>
+        </div>
+
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">AI Evaluation Metrics</h3>
+        <div class="space-y-2 bg-slate-950 p-4 rounded-lg border border-slate-800 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Past Cost $g(n)$:</span>
+            <span id="drawer-g" class="font-bold text-slate-200">0 mins</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Heuristic Estimate $h(n)$:</span>
+            <span id="drawer-h" class="font-bold text-sky-400">42 mins</span>
+          </div>
+          <div class="flex justify-between border-t border-slate-800 pt-2 text-sm">
+            <span class="text-slate-300 font-semibold">Evaluation Score $f(n)$:</span>
+            <span id="drawer-f" class="font-bold text-emerald-400">42 mins</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <p class="text-[11px] text-slate-500">CM2510 - Modern Approach to Artificial Intelligence</p>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // Node Data Definition with Food & Appliance Statuses
+    const NODES = [
+      // Level 0
+      { id: "S0", x: 1000, y: 50, chef: "Free", stove: "Free", rc: "Free", rice: "Raw", dhal: "Raw", chicken: "Raw", g: 0, h: 42, type: "start", path: "root" },
+
+      // Level 1
+      { id: "S1", x: 420, y: 220, chef: "Free", stove: "Free", rc: "Free", rice: "Raw", dhal: "Prepped", chicken: "Prepped", g: 5, h: 37, type: "optimal", path: "optimal" },
+      { id: "S2", x: 1250, y: 220, chef: "Free", stove: "Free", rc: "Free", rice: "Raw", dhal: "Prepped", chicken: "Raw", g: 4, h: 45, type: "suboptimal", path: "sequential" },
+      { id: "X1", x: 1700, y: 220, chef: "Free", stove: "Busy", rc: "Free", rice: "Raw", dhal: "Raw", chicken: "Cooking", g: 20, h: 999, type: "deadend", path: "deadend" },
+      { id: "X4", x: 1980, y: 220, chef: "Free", stove: "Free", rc: "Busy", rice: "Cooking", dhal: "Raw", chicken: "Raw", g: 1, h: 999, type: "deadend", path: "deadend" },
+
+      // Level 2
+      { id: "S3", x: 300, y: 400, chef: "Free", stove: "Free", rc: "Busy", rice: "Cooking", dhal: "Prepped", chicken: "Prepped", g: 9, h: 33, type: "optimal", path: "optimal" },
+      { id: "X3", x: 580, y: 400, chef: "Free", stove: "Busy", rc: "Free", rice: "Raw", dhal: "Cooking", chicken: "Cooking", g: 20, h: 999, type: "deadend", path: "deadend" },
+      { id: "S4", x: 1050, y: 400, chef: "Free", stove: "Free", rc: "Free", rice: "Raw", dhal: "Prepped", chicken: "Prepped", g: 8, h: 41, type: "suboptimal", path: "sequential" },
+      { id: "S5", x: 1450, y: 400, chef: "Free", stove: "Busy", rc: "Free", rice: "Raw", dhal: "Cooking", chicken: "Raw", g: 19, h: 55, type: "stove", path: "stove" },
+      { id: "X2", x: 1750, y: 400, chef: "Free", stove: "Busy", rc: "Free", rice: "Raw", dhal: "Cooking", chicken: "Raw", g: 16, h: 999, type: "deadend", path: "deadend" },
+      { id: "X5", x: 820, y: 550, chef: "Free", stove: "Free", rc: "Free", rice: "Done", dhal: "Prepped", chicken: "Prepped", g: 18, h: 999, type: "deadend", path: "deadend" },
+
+      // Level 3
+      { id: "S6", x: 300, y: 580, chef: "Free", stove: "Busy", rc: "Busy", rice: "Cooking", dhal: "Cooking", chicken: "Prepped", g: 12, h: 30, type: "optimal", path: "optimal" },
+      { id: "S7", x: 1050, y: 580, chef: "Free", stove: "Free", rc: "Busy", rice: "Cooking", dhal: "Prepped", chicken: "Prepped", g: 12, h: 37, type: "suboptimal", path: "sequential" },
+      { id: "S8", x: 1450, y: 580, chef: "Free", stove: "Free", rc: "Free", rice: "Raw", dhal: "Done", chicken: "Prepped", g: 23, h: 51, type: "stove", path: "stove" },
+
+      // Level 4
+      { id: "S9", x: 300, y: 760, chef: "Free", stove: "Free", rc: "Free", rice: "Done", dhal: "Done", chicken: "Prepped", g: 22, h: 20, type: "optimal", path: "optimal" },
+      { id: "S10", x: 1050, y: 760, chef: "Free", stove: "Busy", rc: "Busy", rice: "Cooking", dhal: "Cooking", chicken: "Prepped", g: 27, h: 20, type: "suboptimal", path: "sequential" },
+      { id: "S11", x: 1450, y: 760, chef: "Free", stove: "Busy", rc: "Free", rice: "Raw", dhal: "Done", chicken: "Cooking", g: 43, h: 25, type: "stove", path: "stove" },
+
+      // Level 5
+      { id: "S12", x: 300, y: 940, chef: "Free", stove: "Busy", rc: "Free", rice: "Done", dhal: "Done", chicken: "Cooking", g: 42, h: 0, type: "optimal", path: "optimal" },
+      { id: "S13", x: 1050, y: 940, chef: "Free", stove: "Busy", rc: "Free", rice: "Cooking", dhal: "Done", chicken: "Cooking", g: 47, h: 20, type: "suboptimal", path: "sequential" },
+      { id: "S14", x: 1450, y: 940, chef: "Free", stove: "Busy", rc: "Free", rice: "Cooking", dhal: "Done", chicken: "Done", g: 68, h: 32, type: "stove", path: "stove" },
+
+      // Level 6: Goals
+      { id: "G1", x: 300, y: 1120, chef: "Free", stove: "Free", rc: "Free", rice: "Done", dhal: "Done", chicken: "Done", g: 42, h: 0, type: "goal-optimal", path: "optimal" },
+      { id: "G2", x: 1050, y: 1120, chef: "Free", stove: "Free", rc: "Free", rice: "Done", dhal: "Done", chicken: "Done", g: 67, h: 0, type: "goal-suboptimal", path: "sequential" },
+      { id: "G3", x: 1450, y: 1120, chef: "Free", stove: "Free", rc: "Free", rice: "Done", dhal: "Done", chicken: "Done", g: 100, h: 0, type: "goal-stove", path: "stove" }
+    ];
+
+    // Edges with Action Descriptions & Costs
+    const EDGES = [
+      { from: "S0", to: "S1", action: "Batch chop veggies", cost: "5m", path: "optimal" },
+      { from: "S0", to: "S2", action: "Prep dhal only", cost: "4m", path: "sequential" },
+      { from: "S0", to: "X1", action: "Cook Raw Chicken", cost: "20m", path: "deadend" },
+      { from: "S0", to: "X4", action: "Dry Rice Launch", cost: "1m", path: "deadend" },
+
+      { from: "S1", to: "S3", action: "Start rice cooker", cost: "4m", path: "optimal" },
+      { from: "S1", to: "X3", action: "Stove Collision", cost: "15m", path: "deadend" },
+
+      { from: "S2", to: "S4", action: "Prep chicken only", cost: "4m", path: "sequential" },
+      { from: "S2", to: "S5", action: "Simmer dhal stove", cost: "15m", path: "stove" },
+      { from: "S2", to: "X2", action: "Cook Unwashed Dhal", cost: "12m", path: "deadend" },
+
+      { from: "S3", to: "S6", action: "Simmer dhal stove", cost: "3m", path: "optimal" },
+      { from: "S4", to: "S7", action: "Start rice cooker", cost: "4m", path: "sequential" },
+      { from: "S4", to: "X5", action: "Serve Uncooked Meal", cost: "10m", path: "deadend" },
+
+      { from: "S5", to: "S8", action: "Prep chicken counter", cost: "4m", path: "stove" },
+      { from: "S6", to: "S9", action: "Both dishes finish", cost: "10m", path: "optimal" },
+      { from: "S7", to: "S10", action: "Cook dhal stove", cost: "15m", path: "sequential" },
+
+      { from: "S8", to: "S11", action: "Cook chicken stove", cost: "20m", path: "stove" },
+      { from: "S9", to: "S12", action: "Cook chicken stove", cost: "20m", path: "optimal" },
+      { from: "S10", to: "S13", action: "Cook chicken stove", cost: "20m", path: "sequential" },
+
+      { from: "S11", to: "S14", action: "Boil rice stove", cost: "25m", path: "stove" },
+      { from: "S12", to: "G1", action: "Serve dinner meal", cost: "0m", path: "optimal" },
+      { from: "S13", to: "G2", action: "Serve dinner meal", cost: "0m", path: "sequential" },
+      { from: "S14", to: "G3", action: "Serve dinner meal", cost: "0m", path: "stove" }
+    ];
+
+    let currentZoom = 0.85;
+    let panX = 40;
+    let panY = 20;
+    let isPanning = false;
+    let startX, startY;
+
+    function renderGraph(filter = 'all') {
+      const container = document.getElementById('nodes-container');
+      const edgesGroup = document.getElementById('edges-group');
+      container.innerHTML = '';
+      edgesGroup.innerHTML = '';
+
+      const nodeMap = {};
+      NODES.forEach(n => nodeMap[n.id] = n);
+
+      // Draw Edges
+      EDGES.forEach(edge => {
+        const from = nodeMap[edge.from];
+        const to = nodeMap[edge.to];
+        if (!from || !to) return;
+
+        const isVisible = filter === 'all' || edge.path === filter || (filter === 'deadend' && edge.path === 'deadend') || (filter === 'optimal' && edge.path === 'optimal') || (filter === 'sequential' && (edge.path === 'sequential' || edge.from === 'S0')) || (filter === 'stove' && (edge.path === 'stove' || edge.from === 'S0'));
+        if (!isVisible) return;
+
+        let strokeClass = 'edge-default';
+        let marker = 'url(#arrow-default)';
+        if (edge.path === 'optimal') { strokeClass = 'edge-optimal'; marker = 'url(#arrow-optimal)'; }
+        else if (edge.path === 'sequential' || edge.path === 'stove') { strokeClass = 'edge-suboptimal'; marker = 'url(#arrow-suboptimal)'; }
+        else if (edge.path === 'deadend') { strokeClass = 'edge-deadend'; marker = 'url(#arrow-deadend)'; }
+
+        // Start from bottom center of 'from' card to top center of 'to' card
+        const x1 = from.x + 130;
+        const y1 = from.y + 110;
+        const x2 = to.x + 130;
+        const y2 = to.y;
+
+        // Orthogonal elbow / curve line
+        const midY = (y1 + y2) / 2;
+        const pathData = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+
+        const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        pathEl.setAttribute("d", pathData);
+        pathEl.setAttribute("fill", "none");
+        pathEl.setAttribute("class", `edge-line ${strokeClass}`);
+        pathEl.setAttribute("marker-end", marker);
+        edgesGroup.appendChild(pathEl);
+
+        // Action Label Pill
+        const labelX = (x1 + x2) / 2;
+        const labelY = midY;
+
+        const pill = document.createElement('div');
+        pill.className = 'absolute action-pill pointer-events-none transform -translate-x-1/2 -translate-y-1/2';
+        pill.style.left = `${labelX}px`;
+        pill.style.top = `${labelY}px`;
+        pill.innerHTML = `${edge.action} <span class="text-emerald-400 font-bold">(${edge.cost})</span>`;
+        container.appendChild(pill);
+      });
+
+      // Draw Nodes
+      NODES.forEach(node => {
+        const isVisible = filter === 'all' || node.path === filter || (filter === 'deadend' && node.type === 'deadend') || (filter === 'optimal' && (node.path === 'optimal' || node.id === 'S0')) || (filter === 'sequential' && (node.path === 'sequential' || node.id === 'S0' || node.id === 'S2')) || (filter === 'stove' && (node.path === 'stove' || node.id === 'S0' || node.id === 'S2'));
+        if (!isVisible) return;
+
+        let borderColor = 'border-slate-700 bg-slate-900/90';
+        let headerColor = 'text-slate-300';
+        let badgeType = 'bg-slate-800 text-slate-300';
+
+        if (node.type === 'start') {
+          borderColor = 'border-amber-500/80 bg-amber-950/20';
+          headerColor = 'text-amber-400';
+          badgeType = 'bg-amber-900/50 text-amber-300 border border-amber-600/50';
+        } else if (node.type.includes('optimal')) {
+          borderColor = 'border-emerald-500/80 bg-emerald-950/20';
+          headerColor = 'text-emerald-400';
+          badgeType = 'bg-emerald-900/50 text-emerald-300 border border-emerald-600/50';
+        } else if (node.type.includes('suboptimal')) {
+          borderColor = 'border-amber-500/60 bg-slate-900/90';
+          headerColor = 'text-amber-300';
+          badgeType = 'bg-amber-900/30 text-amber-300 border border-amber-600/30';
+        } else if (node.type.includes('stove')) {
+          borderColor = 'border-orange-500/60 bg-slate-900/90';
+          headerColor = 'text-orange-300';
+          badgeType = 'bg-orange-900/30 text-orange-300 border border-orange-600/30';
+        } else if (node.type === 'deadend') {
+          borderColor = 'border-rose-600/80 bg-rose-950/20';
+          headerColor = 'text-rose-400';
+          badgeType = 'bg-rose-900/50 text-rose-300 border border-rose-600/50';
+        }
+
+        const card = document.createElement('div');
+        card.className = `node-card absolute w-64 p-3 rounded-xl border ${borderColor} shadow-lg`;
+        card.style.left = `${node.x}px`;
+        card.style.top = `${node.y}px`;
+        card.onclick = () => openDrawer(node);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2 mb-2">
+            <div class="font-bold text-sm ${headerColor} flex items-center gap-1.5">
+              <span>${node.id}</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded font-normal bg-slate-800 text-slate-400">g=${node.g}m</span>
+            </div>
+            <div class="text-[10px] font-mono text-sky-400 font-bold">f=${node.g + node.h}m</div>
+          </div>
+
+          <!-- Food Ingredients Status Badges -->
+          <div class="grid grid-cols-3 gap-1.5 text-center text-[10px] mb-2 font-medium">
+            <div class="bg-slate-950/80 p-1 rounded border border-slate-800">
+              <div class="text-slate-500 text-[9px]">Rice</div>
+              <span class="badge badge-${node.rice.toLowerCase()}">${node.rice}</span>
+            </div>
+            <div class="bg-slate-950/80 p-1 rounded border border-slate-800">
+              <div class="text-slate-500 text-[9px]">Dhal</div>
+              <span class="badge badge-${node.dhal.toLowerCase()}">${node.dhal}</span>
+            </div>
+            <div class="bg-slate-950/80 p-1 rounded border border-slate-800">
+              <div class="text-slate-500 text-[9px]">Chicken</div>
+              <span class="badge badge-${node.chicken.toLowerCase()}">${node.chicken}</span>
+            </div>
+          </div>
+
+          <!-- Appliance Statuses -->
+          <div class="flex justify-between items-center text-[10px] text-slate-400 bg-slate-950/40 px-2 py-1 rounded">
+            <span>Stove: <strong class="${node.stove === 'Busy' ? 'text-rose-400' : 'text-slate-300'}">${node.stove}</strong></span>
+            <span>RiceCooker: <strong class="${node.rc === 'Busy' ? 'text-amber-400' : 'text-slate-300'}">${node.rc}</strong></span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openDrawer(node) {
+      document.getElementById('drawer-node-id').textContent = node.id;
+      document.getElementById('drawer-node-type').textContent = node.type.toUpperCase();
+      document.getElementById('drawer-chef').textContent = node.chef;
+      document.getElementById('drawer-stove').textContent = node.stove;
+      document.getElementById('drawer-rc').textContent = node.rc;
+      document.getElementById('drawer-rice').textContent = node.rice;
+      document.getElementById('drawer-dhal').textContent = node.dhal;
+      document.getElementById('drawer-chicken').textContent = node.chicken;
+      document.getElementById('drawer-g').textContent = `${node.g} mins`;
+      document.getElementById('drawer-h').textContent = `${node.h} mins`;
+      document.getElementById('drawer-f').textContent = `${node.g + node.h} mins`;
+
+      document.getElementById('node-drawer').classList.remove('translate-x-full');
+    }
+
+    function closeDrawer() {
+      document.getElementById('node-drawer').classList.add('translate-x-full');
+    }
+
+    function setFilter(filter) {
+      document.querySelectorAll('header button[id^="btn-"]').forEach(btn => {
+        btn.className = "px-3 py-1.5 rounded font-medium text-slate-400 hover:bg-slate-800/60";
+      });
+      const activeBtn = document.getElementById(`btn-${filter}`);
+      if (activeBtn) activeBtn.className = "px-3 py-1.5 rounded font-medium bg-slate-800 text-white shadow";
+      renderGraph(filter);
+    }
+
+    function updateTransform() {
+      document.getElementById('canvas-container').style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+    }
+
+    function zoomBy(factor) {
+      currentZoom *= factor;
+      currentZoom = Math.max(0.4, Math.min(2.0, currentZoom));
+      updateTransform();
+    }
+
+    function resetZoom() {
+      currentZoom = 0.82;
+      panX = 30;
+      panY = 20;
+      updateTransform();
+    }
+
+    // Pan interactions
+    const viewport = document.getElementById('viewport');
+    viewport.addEventListener('mousedown', e => {
+      if (e.target.closest('.node-card') || e.target.closest('aside')) return;
+      isPanning = true;
+      startX = e.clientX - panX;
+      startY = e.clientY - panY;
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!isPanning) return;
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
+      updateTransform();
+    });
+
+    window.addEventListener('mouseup', () => isPanning = false);
+    viewport.addEventListener('wheel', e => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      zoomBy(zoomFactor);
+    });
+
+    // Initialize
+    renderGraph();
+    resetZoom();
+  </script>
+</body>
+</html>
