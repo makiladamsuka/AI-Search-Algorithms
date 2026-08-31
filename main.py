@@ -285,7 +285,8 @@ class GraphVisualizer:
             text_color = '#ffffff'  # Pure white
         
         self.ctx.fillStyle = text_color
-        y_offset = -5 if (node.heuristic > 0 and self.current_algo_type == 'informed') else 0
+        is_informed = hasattr(self, 'current_algo_type') and self.current_algo_type == 'informed'
+        y_offset = -5 if is_informed else 0
         self.ctx.fillText(short_id, node.x, node.y + y_offset)
         
         # Draw full description text above node in a compact, multiline background pill
@@ -339,7 +340,6 @@ class GraphVisualizer:
     def draw_node_label(self, node):
         """Draw node heuristic label (only for informed algorithms)"""
         should_show_heuristic = (
-            node.heuristic > 0 and 
             hasattr(self, 'current_algo_type') and 
             self.current_algo_type == 'informed'
         )
